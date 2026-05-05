@@ -1,0 +1,2013 @@
+<!doctype html>
+<html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Truck Ads Manager — Império Caminhões</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap"
+            rel="stylesheet"
+        />
+        <style>
+            :root {
+                --bg: #ffffff;
+                --bg-secondary: #f5f5f0;
+                --bg-tertiary: #eeeee8;
+                --text: #0a0a0a;
+                --text-secondary: #6b6b6b;
+                --text-tertiary: #9a9a9a;
+                --border: rgba(0, 0, 0, 0.08);
+                --border-hover: rgba(0, 0, 0, 0.15);
+                --accent: #1a1a2e;
+                --yellow: #f5c518;
+                --green: #2d8a4e;
+                --green-bg: #eaf7ef;
+                --amber: #9a6c00;
+                --amber-bg: #fef8e8;
+                --red: #c53030;
+                --red-bg: #fef2f2;
+                --wpp-green: #25d366;
+                --wpp-bg: #e7fbe6;
+                --radius-sm: 6px;
+                --radius: 8px;
+                --radius-lg: 12px;
+                --radius-pill: 20px;
+                --font: "Outfit", -apple-system, sans-serif;
+                --sidebar-w: 220px;
+            }
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+            html,
+            body {
+                height: 100%;
+            }
+            body {
+                font-family: var(--font);
+                color: var(--text);
+                background: var(--bg);
+                overflow: hidden;
+            }
+
+            /* ═══ APP SHELL ═══ */
+            .app {
+                display: flex;
+                height: 100vh;
+            }
+
+            /* ═══ SIDEBAR ═══ */
+            .sidebar {
+                width: var(--sidebar-w);
+                background: var(--bg);
+                border-right: 1px solid var(--border);
+                display: flex;
+                flex-direction: column;
+                flex-shrink: 0;
+                overflow-y: auto;
+            }
+            .sidebar-brand {
+                padding: 1.25rem 1rem 1rem;
+                border-bottom: 1px solid var(--border);
+            }
+            .brand-icon {
+                width: 36px;
+                height: 36px;
+                background: var(--accent);
+                border-radius: var(--radius-sm);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                margin-bottom: 8px;
+            }
+            .brand-icon svg {
+                width: 20px;
+                height: 20px;
+                fill: #fff;
+            }
+            .brand-name {
+                font-size: 12px;
+                font-weight: 600;
+                color: var(--text);
+                line-height: 1.3;
+                letter-spacing: 0.02em;
+            }
+            .brand-sub {
+                font-size: 10px;
+                color: var(--text-tertiary);
+                margin-top: 2px;
+                letter-spacing: 0.03em;
+            }
+            .sidebar-nav {
+                padding: 0.5rem 0;
+                flex: 1;
+            }
+            .nav-item {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                padding: 9px 1rem;
+                margin: 1px 0;
+                cursor: pointer;
+                font-size: 13px;
+                font-weight: 500;
+                color: var(--text-secondary);
+                border-right: 2.5px solid transparent;
+                transition: all 0.2s;
+                position: relative;
+            }
+            .nav-item:hover {
+                background: var(--bg-secondary);
+                color: var(--text);
+            }
+            .nav-item.active {
+                background: var(--bg-secondary);
+                color: var(--text);
+                font-weight: 600;
+                border-right-color: var(--accent);
+            }
+            .nav-item svg {
+                width: 16px;
+                height: 16px;
+                fill: currentColor;
+                opacity: 0.6;
+                flex-shrink: 0;
+            }
+            .nav-item.active svg {
+                opacity: 1;
+            }
+            .sidebar-footer {
+                padding: 1rem;
+                border-top: 1px solid var(--border);
+            }
+            .sidebar-footer-text {
+                font-size: 10px;
+                color: var(--text-tertiary);
+                text-align: center;
+                line-height: 1.5;
+            }
+            .sidebar-footer-text a {
+                color: var(--yellow);
+                text-decoration: none;
+                font-weight: 600;
+            }
+
+            /* ═══ MAIN ═══ */
+            .main {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+                background: var(--bg-secondary);
+            }
+
+            /* ═══ TOPBAR ═══ */
+            .topbar {
+                background: var(--bg);
+                border-bottom: 1px solid var(--border);
+                padding: 0 1.5rem;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                height: 64px;
+                flex-shrink: 0;
+            }
+            .topbar-left {
+            }
+            .topbar-title {
+                font-size: 15px;
+                font-weight: 600;
+                color: var(--text);
+            }
+            .topbar-sub {
+                font-size: 11px;
+                color: var(--text-tertiary);
+                margin-top: 1px;
+            }
+            .btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                padding: 8px 16px;
+                border-radius: var(--radius);
+                font-size: 13px;
+                font-weight: 600;
+                cursor: pointer;
+                border: 1px solid transparent;
+                transition: all 0.2s;
+                font-family: var(--font);
+                text-decoration: none;
+            }
+            .btn svg {
+                width: 14px;
+                height: 14px;
+                fill: currentColor;
+            }
+            .btn-primary {
+                background: var(--accent);
+                color: #fff;
+                border-color: var(--accent);
+            }
+            .btn-primary:hover {
+                opacity: 0.88;
+                transform: translateY(-1px);
+            }
+            .btn-primary:disabled {
+                opacity: 0.45;
+                cursor: not-allowed;
+                transform: none;
+            }
+            .btn-outline {
+                background: transparent;
+                color: var(--text-secondary);
+                border-color: var(--border-hover);
+            }
+            .btn-outline:hover {
+                background: var(--bg-secondary);
+                color: var(--text);
+            }
+            .btn-outline.danger:hover {
+                background: var(--red-bg);
+                color: var(--red);
+                border-color: rgba(197, 48, 48, 0.2);
+            }
+            .btn-sm {
+                padding: 5px 10px;
+                font-size: 11px;
+                font-weight: 500;
+            }
+            .btn-full {
+                width: 100%;
+                justify-content: center;
+            }
+
+            /* ═══ CONTENT ═══ */
+            .content {
+                flex: 1;
+                overflow-y: auto;
+                padding: 1.5rem;
+            }
+
+            /* ═══ PANELS ═══ */
+            .panel {
+                display: none;
+            }
+            .panel.active {
+                display: block;
+                animation: fadeIn 0.3s ease;
+            }
+            @keyframes fadeIn {
+                from {
+                    opacity: 0;
+                    transform: translateY(8px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+
+            /* ═══ METRICS GRID ═══ */
+            .metrics-grid {
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 12px;
+                margin-bottom: 1.75rem;
+            }
+            .metric-card {
+                background: var(--bg);
+                border-radius: var(--radius-lg);
+                padding: 1.15rem 1.25rem;
+                border: 1px solid var(--border);
+                transition: border-color 0.2s;
+            }
+            .metric-card:hover {
+                border-color: var(--border-hover);
+            }
+            .metric-label {
+                font-size: 10px;
+                font-weight: 600;
+                color: var(--text-tertiary);
+                text-transform: uppercase;
+                letter-spacing: 0.06em;
+                margin-bottom: 8px;
+            }
+            .metric-value {
+                font-size: 24px;
+                font-weight: 700;
+                color: var(--text);
+                letter-spacing: -0.02em;
+            }
+            .metric-sub {
+                font-size: 11px;
+                color: var(--text-tertiary);
+                margin-top: 3px;
+            }
+
+            /* ═══ SECTION TITLE ═══ */
+            .section-title {
+                font-size: 11px;
+                font-weight: 600;
+                color: var(--text-tertiary);
+                text-transform: uppercase;
+                letter-spacing: 0.06em;
+                margin-bottom: 0.75rem;
+            }
+
+            /* ═══ AD CARDS ═══ */
+            .ads-list {
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+            }
+            .ad-card {
+                background: var(--bg);
+                border: 1px solid var(--border);
+                border-radius: var(--radius-lg);
+                padding: 1rem 1.25rem;
+                display: flex;
+                align-items: center;
+                gap: 1rem;
+                transition:
+                    border-color 0.2s,
+                    box-shadow 0.2s;
+            }
+            .ad-card:hover {
+                border-color: var(--border-hover);
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+            }
+            .ad-thumb {
+                width: 56px;
+                height: 42px;
+                background: var(--bg-tertiary);
+                border-radius: var(--radius);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+                font-size: 22px;
+                border: 1px solid var(--border);
+            }
+            .ad-info {
+                flex: 1;
+                min-width: 0;
+            }
+            .ad-name {
+                font-size: 13px;
+                font-weight: 600;
+                color: var(--text);
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            .ad-meta {
+                font-size: 11px;
+                color: var(--text-tertiary);
+                margin-top: 2px;
+            }
+            .badge {
+                display: inline-flex;
+                align-items: center;
+                gap: 4px;
+                padding: 3px 10px;
+                border-radius: var(--radius-pill);
+                font-size: 10px;
+                font-weight: 600;
+                letter-spacing: 0.02em;
+                margin-top: 4px;
+            }
+            .badge-active {
+                background: var(--green-bg);
+                color: var(--green);
+            }
+            .badge-paused {
+                background: var(--amber-bg);
+                color: var(--amber);
+            }
+            .badge-draft {
+                background: var(--bg-tertiary);
+                color: var(--text-tertiary);
+            }
+            .badge::before {
+                content: "";
+                width: 5px;
+                height: 5px;
+                border-radius: 50%;
+                background: currentColor;
+            }
+            .ad-stats {
+                display: flex;
+                gap: 1.5rem;
+                flex-shrink: 0;
+            }
+            .ad-stat {
+                text-align: right;
+            }
+            .ad-stat-val {
+                font-size: 14px;
+                font-weight: 600;
+                color: var(--text);
+            }
+            .ad-stat-lbl {
+                font-size: 10px;
+                color: var(--text-tertiary);
+            }
+            .ad-actions {
+                display: flex;
+                gap: 5px;
+                flex-shrink: 0;
+            }
+
+            /* ═══ EMPTY STATE ═══ */
+            .empty {
+                text-align: center;
+                padding: 4rem 1rem;
+            }
+            .empty-icon {
+                font-size: 36px;
+                margin-bottom: 10px;
+            }
+            .empty-title {
+                font-size: 14px;
+                font-weight: 600;
+                color: var(--text-secondary);
+                margin-bottom: 4px;
+            }
+            .empty-sub {
+                font-size: 12px;
+                color: var(--text-tertiary);
+            }
+
+            /* ═══ FORM ═══ */
+            .form-panel {
+                max-width: 700px;
+            }
+            .form-card {
+                background: var(--bg);
+                border: 1px solid var(--border);
+                border-radius: var(--radius-lg);
+                padding: 1.25rem;
+                margin-bottom: 1rem;
+            }
+            .form-card-title {
+                font-size: 13px;
+                font-weight: 600;
+                color: var(--text);
+                margin-bottom: 1rem;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            .form-card-title svg {
+                width: 16px;
+                height: 16px;
+                fill: var(--text-secondary);
+            }
+            .form-row {
+                display: grid;
+                gap: 12px;
+                margin-bottom: 12px;
+            }
+            .form-row.c3 {
+                grid-template-columns: 1fr 1fr 1fr;
+            }
+            .form-row.c2 {
+                grid-template-columns: 1fr 1fr;
+            }
+            .form-group {
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+            }
+            .form-group label {
+                font-size: 11px;
+                font-weight: 600;
+                color: var(--text-secondary);
+                letter-spacing: 0.02em;
+            }
+            .form-group input,
+            .form-group select,
+            .form-group textarea {
+                font-size: 13px;
+                padding: 8px 11px;
+                border: 1px solid var(--border);
+                border-radius: var(--radius);
+                background: var(--bg);
+                color: var(--text);
+                outline: none;
+                transition: border-color 0.2s;
+                font-family: var(--font);
+            }
+            .form-group input:focus,
+            .form-group select:focus,
+            .form-group textarea:focus {
+                border-color: var(--accent);
+            }
+            .form-group textarea {
+                resize: vertical;
+                min-height: 80px;
+                line-height: 1.5;
+            }
+            .form-group input::placeholder {
+                color: var(--text-tertiary);
+            }
+
+            /* ═══ BUDGET ═══ */
+            .budget-section {
+            }
+            .budget-presets {
+                display: flex;
+                gap: 6px;
+                flex-wrap: wrap;
+            }
+            .budget-btn {
+                padding: 8px 18px;
+                border-radius: var(--radius-pill);
+                font-size: 13px;
+                font-weight: 600;
+                cursor: pointer;
+                background: var(--bg-secondary);
+                color: var(--text-secondary);
+                border: 1.5px solid var(--border);
+                transition: all 0.2s;
+                font-family: var(--font);
+            }
+            .budget-btn:hover {
+                border-color: var(--accent);
+                color: var(--text);
+            }
+            .budget-btn.active {
+                background: var(--accent);
+                color: #fff;
+                border-color: var(--accent);
+            }
+            .budget-preview {
+                margin-top: 12px;
+                background: var(--bg-secondary);
+                border-radius: var(--radius);
+                padding: 12px 14px;
+            }
+            .budget-preview-row {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 4px 0;
+            }
+            .budget-preview-row + .budget-preview-row {
+                border-top: 1px solid var(--border);
+                margin-top: 6px;
+                padding-top: 10px;
+            }
+            .budget-preview-label {
+                font-size: 12px;
+                color: var(--text-secondary);
+            }
+            .budget-preview-val {
+                font-size: 14px;
+                font-weight: 700;
+                color: var(--text);
+            }
+            .budget-preview-val.highlight {
+                font-size: 16px;
+                color: var(--accent);
+            }
+
+            /* ═══ UPLOAD ═══ */
+            .upload-area {
+                border: 1.5px dashed var(--border-hover);
+                border-radius: var(--radius);
+                padding: 2rem;
+                text-align: center;
+                cursor: pointer;
+                transition: all 0.2s;
+            }
+            .upload-area:hover {
+                background: var(--bg-secondary);
+                border-color: var(--accent);
+            }
+            .upload-icon {
+                display: block;
+                margin: 0 auto 8px;
+                width: 28px;
+                height: 28px;
+                fill: var(--text-tertiary);
+            }
+            .upload-label {
+                font-size: 13px;
+                font-weight: 500;
+                color: var(--text-secondary);
+            }
+            .upload-sub {
+                font-size: 11px;
+                color: var(--text-tertiary);
+                margin-top: 3px;
+            }
+            .preview-imgs {
+                display: flex;
+                gap: 8px;
+                flex-wrap: wrap;
+                margin-top: 12px;
+            }
+            .preview-img-wrap {
+                position: relative;
+                width: 72px;
+                height: 54px;
+            }
+            .preview-img {
+                width: 72px;
+                height: 54px;
+                object-fit: cover;
+                border-radius: var(--radius-sm);
+                border: 1px solid var(--border);
+            }
+            .preview-remove {
+                position: absolute;
+                top: -6px;
+                right: -6px;
+                width: 18px;
+                height: 18px;
+                background: var(--red);
+                color: #fff;
+                border: none;
+                border-radius: 50%;
+                font-size: 11px;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-family: var(--font);
+                line-height: 1;
+            }
+
+            /* ═══ CHECK PILLS ═══ */
+            .check-pill {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                padding: 6px 14px;
+                border-radius: var(--radius-pill);
+                background: var(--bg-secondary);
+                border: 1px solid var(--border);
+                cursor: pointer;
+                transition: all 0.2s;
+                font-size: 12px;
+                font-weight: 500;
+                color: var(--text-secondary);
+            }
+            .check-pill input {
+                display: none;
+            }
+            .check-pill:has(input:checked) {
+                background: var(--accent);
+                color: #fff;
+                border-color: var(--accent);
+            }
+
+            /* ═══ LOADING ═══ */
+            .loading-box {
+                background: var(--bg);
+                border: 1px solid var(--border);
+                border-radius: var(--radius-lg);
+                padding: 2rem;
+                text-align: center;
+                margin-top: 1rem;
+            }
+            .spinner {
+                width: 20px;
+                height: 20px;
+                border: 2.5px solid var(--border-hover);
+                border-top-color: var(--accent);
+                border-radius: 50%;
+                animation: spin 0.7s linear infinite;
+                display: inline-block;
+            }
+            @keyframes spin {
+                to {
+                    transform: rotate(360deg);
+                }
+            }
+            .loading-msg {
+                font-size: 13px;
+                color: var(--text-secondary);
+                margin-top: 10px;
+            }
+
+            /* ═══ FILTER BAR ═══ */
+            .filter-bar {
+                display: flex;
+                gap: 10px;
+                margin-bottom: 1rem;
+                align-items: center;
+            }
+            .filter-bar input {
+                max-width: 240px;
+                flex: 1;
+                font-size: 13px;
+                padding: 8px 12px;
+                border: 1px solid var(--border);
+                border-radius: var(--radius);
+                background: var(--bg);
+                color: var(--text);
+                outline: none;
+                font-family: var(--font);
+            }
+            .filter-bar input:focus {
+                border-color: var(--accent);
+            }
+            .filter-bar select {
+                font-size: 12px;
+                padding: 8px 12px;
+                border: 1px solid var(--border);
+                border-radius: var(--radius);
+                background: var(--bg);
+                color: var(--text);
+                outline: none;
+                font-family: var(--font);
+                cursor: pointer;
+            }
+
+            /* ═══ TOAST ═══ */
+            .toast {
+                position: fixed;
+                bottom: 24px;
+                right: 24px;
+                z-index: 999;
+                background: var(--accent);
+                color: #fff;
+                padding: 12px 20px;
+                border-radius: var(--radius);
+                font-size: 13px;
+                font-weight: 500;
+                transform: translateY(80px);
+                opacity: 0;
+                transition: all 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+                pointer-events: none;
+            }
+            .toast.show {
+                transform: translateY(0);
+                opacity: 1;
+            }
+
+            /* ═══ RESPONSIVE ═══ */
+            @media (max-width: 900px) {
+                .metrics-grid {
+                    grid-template-columns: repeat(2, 1fr);
+                }
+                .ad-stats {
+                    display: none;
+                }
+                .form-row.c3 {
+                    grid-template-columns: 1fr;
+                }
+                .form-row.c2 {
+                    grid-template-columns: 1fr;
+                }
+                .cfg-grid {
+                    grid-template-columns: 1fr;
+                }
+            }
+            @media (max-width: 768px) {
+                .sidebar {
+                    display: none;
+                }
+                .topbar {
+                    padding: 0 1rem;
+                }
+                .content {
+                    padding: 1rem;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="app">
+            <!-- ═══════════ SIDEBAR ═══════════ -->
+            <aside class="sidebar">
+                <div class="sidebar-brand">
+                    <div class="brand-icon">
+                        <svg viewBox="0 0 24 24">
+                            <path
+                                d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4zM6 18.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm13.5-9l1.96 2.5H17V9.5h2.5zm-1.5 9c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"
+                            />
+                        </svg>
+                    </div>
+                    <div class="brand-name">Império Caminhões</div>
+                    <div class="brand-sub">Meta Ads · WhatsApp</div>
+                </div>
+                <nav class="sidebar-nav">
+                    <div class="nav-item active" onclick="nav('dashboard')">
+                        <svg viewBox="0 0 24 24">
+                            <path
+                                d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"
+                            />
+                        </svg>
+                        Dashboard
+                    </div>
+                    <div class="nav-item" onclick="nav('criar')">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+                        </svg>
+                        Criar anúncio
+                    </div>
+                    <div class="nav-item" onclick="nav('modelo')">
+                        <svg viewBox="0 0 24 24">
+                            <path
+                                d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13zM6 20V4h5v7h7v9H6z"
+                            />
+                        </svg>
+                        Anúncio modelo
+                    </div>
+                    <div class="nav-item" onclick="nav('campanhas')">
+                        <svg viewBox="0 0 24 24">
+                            <path
+                                d="M18 11v2h4v-2h-4zm-2 6.61c.96.71 2.21 1.65 3.2 2.39.4-.53.8-1.07 1.2-1.6-.99-.74-2.24-1.68-3.2-2.4-.4.54-.8 1.08-1.2 1.61zM20.4 5.6c-.4-.53-.8-1.07-1.2-1.6-.99.74-2.24 1.68-3.2 2.4.4.53.8 1.07 1.2 1.6.96-.72 2.21-1.65 3.2-2.4zM4 9c-1.1 0-2 .9-2 2v2c0 1.1.9 2 2 2h1v4h2v-4h1l5 3V6L8 9H4zm11.5 3c0-1.33-.58-2.53-1.5-3.35v6.69c.92-.81 1.5-2.01 1.5-3.34z"
+                            />
+                        </svg>
+                        Campanhas
+                    </div>
+                    <div class="nav-item" onclick="nav('metricas')">
+                        <svg viewBox="0 0 24 24">
+                            <path
+                                d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"
+                            />
+                        </svg>
+                        Métricas
+                    </div>
+                </nav>
+                <div class="sidebar-footer">
+                    <div class="sidebar-footer-text">
+                        Powered by <a href="#">Império Caminhões</a><br />&copy;
+                        2026
+                    </div>
+                </div>
+            </aside>
+
+            <!-- ═══════════ MAIN ═══════════ -->
+            <div class="main">
+                <!-- TOPBAR -->
+                <header class="topbar">
+                    <div class="topbar-left">
+                        <div class="topbar-title" id="topbar-title">
+                            Dashboard
+                        </div>
+                        <div class="topbar-sub" id="topbar-sub">
+                            Visão geral das campanhas
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" onclick="nav('criar')">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+                        </svg>
+                        Novo anúncio
+                    </button>
+                </header>
+
+                <!-- CONTENT -->
+                <div class="content">
+                    <!-- ═══ DASHBOARD ═══ -->
+                    <div class="panel active" id="p-dashboard">
+                        <div class="metrics-grid">
+                            <div class="metric-card">
+                                <div class="metric-label">Anúncios ativos</div>
+                                <div class="metric-value" id="m-active">0</div>
+                                <div class="metric-sub">campanhas rodando</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-label">Leads gerados</div>
+                                <div class="metric-value" id="m-leads">0</div>
+                                <div class="metric-sub">
+                                    mensagens no WhatsApp
+                                </div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-label">Investido</div>
+                                <div class="metric-value" id="m-spend">$0</div>
+                                <div class="metric-sub">orçamento total</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-label">CPL médio</div>
+                                <div class="metric-value" id="m-cpl">—</div>
+                                <div class="metric-sub">custo por lead</div>
+                            </div>
+                        </div>
+                        <div class="section-title">Anúncios recentes</div>
+                        <div class="ads-list" id="dash-ads"></div>
+                    </div>
+
+                    <!-- ═══ CRIAR ANÚNCIO ═══ -->
+                    <div class="panel" id="p-criar">
+                        <div class="form-panel">
+                            <div class="form-card">
+                                <div class="form-card-title">
+                                    <svg viewBox="0 0 24 24">
+                                        <path
+                                            d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4zM6 18.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm13.5-9l1.96 2.5H17V9.5h2.5zm-1.5 9c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"
+                                        />
+                                    </svg>
+                                    Dados do caminhão
+                                </div>
+                                <div class="form-row c3">
+                                    <div class="form-group">
+                                        <label>Modelo *</label
+                                        ><input
+                                            id="f-modelo"
+                                            placeholder="Ex: Volvo FH 540"
+                                        />
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Cor *</label
+                                        ><input
+                                            id="f-cor"
+                                            placeholder="Ex: Branco"
+                                        />
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Ano *</label
+                                        ><input
+                                            id="f-ano"
+                                            placeholder="Ex: 2023"
+                                            maxlength="4"
+                                        />
+                                    </div>
+                                </div>
+                                <div
+                                    class="form-row c2"
+                                    style="margin-bottom: 0"
+                                >
+                                    <div class="form-group">
+                                        <label>Preço (opcional)</label
+                                        ><input
+                                            id="f-preco"
+                                            placeholder="Ex: R$ 380.000"
+                                        />
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Quilometragem (opcional)</label
+                                        ><input
+                                            id="f-km"
+                                            placeholder="Ex: 120.000 km"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-card">
+                                <div class="form-card-title">
+                                    <svg viewBox="0 0 24 24">
+                                        <path
+                                            d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"
+                                        />
+                                    </svg>
+                                    Imagens do anúncio
+                                </div>
+                                <div
+                                    class="upload-area"
+                                    onclick="
+                                        document
+                                            .getElementById('img-input')
+                                            .click()
+                                    "
+                                >
+                                    <svg
+                                        class="upload-icon"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"
+                                        />
+                                    </svg>
+                                    <div class="upload-label">
+                                        Clique para selecionar imagens
+                                    </div>
+                                    <div class="upload-sub">
+                                        JPG, PNG · Máx. 5 imagens
+                                    </div>
+                                </div>
+                                <input
+                                    type="file"
+                                    id="img-input"
+                                    accept="image/*"
+                                    multiple
+                                    style="display: none"
+                                    onchange="handleImages(this)"
+                                />
+                                <div
+                                    class="preview-imgs"
+                                    id="preview-imgs"
+                                ></div>
+                            </div>
+
+                            <div class="form-card">
+                                <div class="form-card-title">
+                                    <svg viewBox="0 0 24 24">
+                                        <path
+                                            d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"
+                                        />
+                                    </svg>
+                                    Orçamento diário
+                                </div>
+                                <div class="budget-section">
+                                    <div class="budget-presets">
+                                        <button
+                                            class="budget-btn"
+                                            onclick="setBudget(5, this)"
+                                        >
+                                            $5
+                                        </button>
+                                        <button
+                                            class="budget-btn active"
+                                            onclick="setBudget(10, this)"
+                                        >
+                                            $10
+                                        </button>
+                                        <button
+                                            class="budget-btn"
+                                            onclick="setBudget(15, this)"
+                                        >
+                                            $15
+                                        </button>
+                                        <button
+                                            class="budget-btn"
+                                            onclick="setBudget(20, this)"
+                                        >
+                                            $20
+                                        </button>
+                                        <button
+                                            class="budget-btn"
+                                            onclick="setBudget(30, this)"
+                                        >
+                                            $30
+                                        </button>
+                                        <button
+                                            class="budget-btn"
+                                            onclick="setBudget(50, this)"
+                                        >
+                                            $50
+                                        </button>
+                                    </div>
+                                    <div
+                                        class="form-row c2"
+                                        style="
+                                            margin-top: 12px;
+                                            margin-bottom: 0;
+                                        "
+                                    >
+                                        <div class="form-group">
+                                            <label
+                                                >Valor personalizado
+                                                (USD/dia)</label
+                                            >
+                                            <input
+                                                id="f-budget"
+                                                type="number"
+                                                min="1"
+                                                max="1000"
+                                                value="10"
+                                                placeholder="Ex: 10"
+                                                oninput="updateBudgetPreview()"
+                                            />
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Duração da campanha</label>
+                                            <select
+                                                id="f-duracao"
+                                                onchange="updateBudgetPreview()"
+                                            >
+                                                <option value="7">
+                                                    7 dias
+                                                </option>
+                                                <option value="14">
+                                                    14 dias
+                                                </option>
+                                                <option value="30">
+                                                    30 dias
+                                                </option>
+                                                <option value="0">
+                                                    Contínuo (sem fim)
+                                                </option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div
+                                        class="budget-preview"
+                                        id="budget-preview"
+                                    >
+                                        <div class="budget-preview-row">
+                                            <span class="budget-preview-label"
+                                                >Investimento diário</span
+                                            >
+                                            <span
+                                                class="budget-preview-val"
+                                                id="bp-daily"
+                                                >$10,00</span
+                                            >
+                                        </div>
+                                        <div class="budget-preview-row">
+                                            <span class="budget-preview-label"
+                                                >Investimento total
+                                                estimado</span
+                                            >
+                                            <span
+                                                class="budget-preview-val highlight"
+                                                id="bp-total"
+                                                >$70,00</span
+                                            >
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button
+                                class="btn btn-primary btn-full"
+                                id="btn-gerar"
+                                onclick="gerarAnuncio()"
+                                style="padding: 12px 20px; font-size: 14px"
+                            >
+                                <svg viewBox="0 0 24 24">
+                                    <path
+                                        d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7z"
+                                    />
+                                </svg>
+                                Gerar anúncio com IA
+                            </button>
+
+                            <div id="loading-box" style="display: none">
+                                <div class="loading-box">
+                                    <div class="spinner"></div>
+                                    <div class="loading-msg" id="loading-msg">
+                                        Gerando copy do anúncio...
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ═══ ANÚNCIO MODELO ═══ -->
+                    <div class="panel" id="p-modelo">
+                        <div class="form-panel">
+                            <div
+                                class="form-card"
+                                style="border-left: 3px solid var(--yellow)"
+                            >
+                                <div
+                                    class="form-card-title"
+                                    style="margin-bottom: 6px"
+                                >
+                                    <svg
+                                        viewBox="0 0 24 24"
+                                        style="fill: var(--yellow)"
+                                    >
+                                        <path
+                                            d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"
+                                        />
+                                    </svg>
+                                    <span
+                                        >Dados padrão para todos os
+                                        anúncios</span
+                                    >
+                                </div>
+                                <p
+                                    style="
+                                        font-size: 12px;
+                                        color: var(--text-secondary);
+                                        margin-bottom: 1rem;
+                                        line-height: 1.5;
+                                    "
+                                >
+                                    Preencha uma vez e esses dados serão
+                                    aplicados automaticamente a cada novo
+                                    anúncio criado. Assim você só precisa
+                                    informar modelo, cor e ano na hora de criar.
+                                </p>
+                            </div>
+
+                            <div class="form-card">
+                                <div class="form-card-title">
+                                    <svg viewBox="0 0 24 24">
+                                        <path
+                                            d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
+                                        />
+                                    </svg>
+                                    Dados do vendedor
+                                </div>
+                                <div class="form-row c2">
+                                    <div class="form-group">
+                                        <label>Nome da loja / vendedor</label
+                                        ><input
+                                            id="m-nome"
+                                            placeholder="Ex: Império Caminhões"
+                                        />
+                                    </div>
+                                    <div class="form-group">
+                                        <label>WhatsApp de contato *</label
+                                        ><input
+                                            id="m-wpp"
+                                            placeholder="Ex: 41999999999"
+                                        />
+                                    </div>
+                                </div>
+                                <div class="form-row c2">
+                                    <div class="form-group">
+                                        <label>Cidade / Região *</label
+                                        ><input
+                                            id="m-cidade"
+                                            placeholder="Ex: Curitiba"
+                                        />
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Estado</label>
+                                        <select id="m-estado">
+                                            <option value="">
+                                                Selecione...
+                                            </option>
+                                            <option>AC</option>
+                                            <option>AL</option>
+                                            <option>AP</option>
+                                            <option>AM</option>
+                                            <option>BA</option>
+                                            <option>CE</option>
+                                            <option>DF</option>
+                                            <option>ES</option>
+                                            <option>GO</option>
+                                            <option>MA</option>
+                                            <option>MT</option>
+                                            <option>MS</option>
+                                            <option>MG</option>
+                                            <option>PA</option>
+                                            <option>PB</option>
+                                            <option selected>PR</option>
+                                            <option>PE</option>
+                                            <option>PI</option>
+                                            <option>RJ</option>
+                                            <option>RN</option>
+                                            <option>RS</option>
+                                            <option>RO</option>
+                                            <option>RR</option>
+                                            <option>SC</option>
+                                            <option>SP</option>
+                                            <option>SE</option>
+                                            <option>TO</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-card">
+                                <div class="form-card-title">
+                                    <svg viewBox="0 0 24 24">
+                                        <path
+                                            d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"
+                                        />
+                                    </svg>
+                                    Segmentação de público
+                                </div>
+                                <div class="form-row c2">
+                                    <div class="form-group">
+                                        <label>Idade mínima</label
+                                        ><input
+                                            id="m-idade-min"
+                                            type="number"
+                                            value="25"
+                                            min="18"
+                                            max="65"
+                                        />
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Idade máxima</label
+                                        ><input
+                                            id="m-idade-max"
+                                            type="number"
+                                            value="55"
+                                            min="18"
+                                            max="65"
+                                        />
+                                    </div>
+                                </div>
+                                <div class="form-row c2">
+                                    <div class="form-group">
+                                        <label>Raio de alcance (km)</label>
+                                        <select id="m-raio">
+                                            <option value="50">50 km</option>
+                                            <option value="100" selected>
+                                                100 km
+                                            </option>
+                                            <option value="200">200 km</option>
+                                            <option value="500">500 km</option>
+                                            <option value="0">
+                                                Brasil inteiro
+                                            </option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Gênero</label>
+                                        <select id="m-genero">
+                                            <option value="todos" selected>
+                                                Todos
+                                            </option>
+                                            <option value="masculino">
+                                                Masculino
+                                            </option>
+                                            <option value="feminino">
+                                                Feminino
+                                            </option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="form-group" style="margin-top: 4px">
+                                    <label>Interesses do público</label>
+                                    <input
+                                        id="m-interesses"
+                                        value="Transporte rodoviário, Caminhões, Logística, Frete, Transportadora"
+                                        placeholder="Separados por vírgula"
+                                    />
+                                </div>
+                            </div>
+
+                            <div class="form-card">
+                                <div class="form-card-title">
+                                    <svg viewBox="0 0 24 24">
+                                        <path
+                                            d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"
+                                        />
+                                    </svg>
+                                    Condições de pagamento
+                                </div>
+                                <div class="form-group">
+                                    <label
+                                        >Formas de pagamento /
+                                        financiamento</label
+                                    >
+                                    <input
+                                        id="m-pagamento"
+                                        value="Financiamento, consórcio, troca com troco"
+                                        placeholder="Ex: Financiamento, à vista, troca"
+                                    />
+                                </div>
+                            </div>
+
+                            <div class="form-card">
+                                <div class="form-card-title">
+                                    <svg viewBox="0 0 24 24">
+                                        <path
+                                            d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"
+                                        />
+                                    </svg>
+                                    Posicionamentos padrão
+                                </div>
+                                <div class="form-group">
+                                    <label>Onde os anúncios aparecem</label>
+                                    <div
+                                        style="
+                                            display: flex;
+                                            flex-wrap: wrap;
+                                            gap: 6px;
+                                            margin-top: 6px;
+                                        "
+                                        id="m-posicionamentos"
+                                    >
+                                        <label class="check-pill"
+                                            ><input
+                                                type="checkbox"
+                                                checked
+                                                value="Feed Facebook"
+                                            /><span>Feed Facebook</span></label
+                                        >
+                                        <label class="check-pill"
+                                            ><input
+                                                type="checkbox"
+                                                checked
+                                                value="Feed Instagram"
+                                            /><span>Feed Instagram</span></label
+                                        >
+                                        <label class="check-pill"
+                                            ><input
+                                                type="checkbox"
+                                                checked
+                                                value="Stories"
+                                            /><span>Stories</span></label
+                                        >
+                                        <label class="check-pill"
+                                            ><input
+                                                type="checkbox"
+                                                checked
+                                                value="Reels"
+                                            /><span>Reels</span></label
+                                        >
+                                        <label class="check-pill"
+                                            ><input
+                                                type="checkbox"
+                                                value="Marketplace"
+                                            /><span>Marketplace</span></label
+                                        >
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button
+                                class="btn btn-primary btn-full"
+                                onclick="salvarModelo()"
+                                style="padding: 12px 20px; font-size: 14px"
+                            >
+                                <svg viewBox="0 0 24 24">
+                                    <path
+                                        d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"
+                                    />
+                                </svg>
+                                Salvar dados padrão
+                            </button>
+
+                            <div
+                                id="modelo-status"
+                                style="display: none; margin-top: 1rem"
+                            >
+                                <div
+                                    class="form-card"
+                                    style="
+                                        border-left: 3px solid var(--green);
+                                        padding: 1rem 1.25rem;
+                                    "
+                                >
+                                    <div
+                                        style="
+                                            display: flex;
+                                            align-items: center;
+                                            gap: 8px;
+                                        "
+                                    >
+                                        <svg
+                                            width="16"
+                                            height="16"
+                                            viewBox="0 0 24 24"
+                                            fill="var(--green)"
+                                        >
+                                            <path
+                                                d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"
+                                            />
+                                        </svg>
+                                        <span
+                                            style="
+                                                font-size: 13px;
+                                                font-weight: 600;
+                                                color: var(--green);
+                                            "
+                                            >Dados padrão salvos!</span
+                                        >
+                                    </div>
+                                    <p
+                                        style="
+                                            font-size: 11px;
+                                            color: var(--text-secondary);
+                                            margin-top: 4px;
+                                        "
+                                    >
+                                        Todos os novos anúncios usarão essas
+                                        configurações automaticamente.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ═══ CAMPANHAS ═══ -->
+                    <div class="panel" id="p-campanhas">
+                        <div class="filter-bar">
+                            <input
+                                id="search-camp"
+                                placeholder="Buscar campanha..."
+                                oninput="renderCampanhas()"
+                            />
+                            <select
+                                id="filter-status"
+                                onchange="renderCampanhas()"
+                            >
+                                <option value="">Todos os status</option>
+                                <option value="ativo">Ativo</option>
+                                <option value="pausado">Pausado</option>
+                                <option value="rascunho">Rascunho</option>
+                            </select>
+                        </div>
+                        <div class="ads-list" id="camp-list"></div>
+                    </div>
+
+                    <!-- ═══ MÉTRICAS ═══ -->
+                    <div class="panel" id="p-metricas">
+                        <div
+                            class="metrics-grid"
+                            style="
+                                grid-template-columns: repeat(3, 1fr);
+                                margin-bottom: 1.75rem;
+                            "
+                        >
+                            <div class="metric-card">
+                                <div class="metric-label">
+                                    Total de anúncios
+                                </div>
+                                <div class="metric-value" id="mt-total">0</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-label">Anúncios ativos</div>
+                                <div class="metric-value" id="mt-ativos">0</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-label">Orçamento total</div>
+                                <div class="metric-value" id="mt-orc">$0</div>
+                            </div>
+                        </div>
+                        <div class="section-title">Performance por anúncio</div>
+                        <div class="ads-list" id="met-list"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TOAST -->
+        <div class="toast" id="toast"></div>
+
+        <script>
+            /* ═══ CONFIG ═══ */
+            const API_BASE = 'http://localhost:8000';
+
+            /* ═══ STATE ═══ */
+            let ads = [];
+            let generatedData = null;
+            let selectedImages = [];
+
+            /* ═══ API CLIENT ═══ */
+            async function apiCall(method, path, body) {
+                const opts = { method, headers: { 'Content-Type': 'application/json' } };
+                if (body) opts.body = JSON.stringify(body);
+                const res = await fetch(API_BASE + path, opts);
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    throw new Error(err.message || `HTTP ${res.status}`);
+                }
+                return res.json();
+            }
+
+            async function loadAds() {
+                try {
+                    const res = await fetch(`${API_BASE}/ads/truck/`);
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                    ads = await res.json();
+                } catch (err) {
+                    console.error('Erro ao carregar anúncios:', err);
+                    toast('Servidor indisponível — verifique o backend');
+                }
+            }
+
+            /* ═══ TOAST ═══ */
+            function toast(msg) {
+                const t = document.getElementById("toast");
+                t.textContent = msg;
+                t.classList.add("show");
+                setTimeout(() => t.classList.remove("show"), 2800);
+            }
+
+            /* ═══ NAV ═══ */
+            const titles = {
+                dashboard: ["Dashboard", "Visão geral das campanhas"],
+                criar: ["Criar anúncio", "Preencha os dados do caminhão"],
+                modelo: [
+                    "Anúncio modelo",
+                    "Dados padrão replicados em todos os anúncios",
+                ],
+                campanhas: [
+                    "Campanhas",
+                    "Gerencie seus anúncios ativos e pausados",
+                ],
+                metricas: ["Métricas", "Acompanhe o desempenho das campanhas"],
+            };
+            async function nav(panel) {
+                document
+                    .querySelectorAll(".panel")
+                    .forEach((p) => p.classList.remove("active"));
+                document
+                    .querySelectorAll(".nav-item")
+                    .forEach((n) => n.classList.remove("active"));
+                document.getElementById("p-" + panel).classList.add("active");
+                const idx = {
+                    dashboard: 0,
+                    criar: 1,
+                    modelo: 2,
+                    campanhas: 3,
+                    metricas: 4,
+                };
+                document
+                    .querySelectorAll(".nav-item")
+                    [idx[panel]]?.classList.add("active");
+                document.getElementById("topbar-title").textContent =
+                    titles[panel][0];
+                document.getElementById("topbar-sub").textContent =
+                    titles[panel][1];
+                if (panel === "dashboard") { await loadAds(); renderDashboard(); }
+                if (panel === "campanhas") { await loadAds(); renderCampanhas(); }
+                if (panel === "metricas") { await loadAds(); renderMetricas(); }
+                if (panel === "modelo") loadModelo();
+            }
+
+            /* ═══ IMAGES ═══ */
+            function handleImages(input) {
+                const files = Array.from(input.files).slice(0, 5);
+                selectedImages = files;
+                const c = document.getElementById("preview-imgs");
+                c.innerHTML = "";
+                files.forEach((file, i) => {
+                    const wrap = document.createElement("div");
+                    wrap.className = "preview-img-wrap";
+                    const img = document.createElement("img");
+                    img.className = "preview-img";
+                    img.src = URL.createObjectURL(file);
+                    const btn = document.createElement("button");
+                    btn.className = "preview-remove";
+                    btn.textContent = "×";
+                    btn.onclick = (e) => {
+                        e.stopPropagation();
+                        selectedImages.splice(i, 1);
+                        handleImagesRefresh();
+                    };
+                    wrap.appendChild(img);
+                    wrap.appendChild(btn);
+                    c.appendChild(wrap);
+                });
+            }
+            function handleImagesRefresh() {
+                const c = document.getElementById("preview-imgs");
+                c.innerHTML = "";
+                selectedImages.forEach((file, i) => {
+                    const wrap = document.createElement("div");
+                    wrap.className = "preview-img-wrap";
+                    const img = document.createElement("img");
+                    img.className = "preview-img";
+                    img.src = URL.createObjectURL(file);
+                    const btn = document.createElement("button");
+                    btn.className = "preview-remove";
+                    btn.textContent = "×";
+                    btn.onclick = (e) => {
+                        e.stopPropagation();
+                        selectedImages.splice(i, 1);
+                        handleImagesRefresh();
+                    };
+                    wrap.appendChild(img);
+                    wrap.appendChild(btn);
+                    c.appendChild(wrap);
+                });
+            }
+
+            /* ═══ BUDGET ═══ */
+            function setBudget(val, btn) {
+                document
+                    .querySelectorAll(".budget-btn")
+                    .forEach((b) => b.classList.remove("active"));
+                btn.classList.add("active");
+                document.getElementById("f-budget").value = val;
+                updateBudgetPreview();
+            }
+            function updateBudgetPreview() {
+                const daily =
+                    parseFloat(document.getElementById("f-budget").value) || 0;
+                const dur =
+                    parseInt(document.getElementById("f-duracao").value) || 0;
+                document.getElementById("bp-daily").textContent =
+                    "$" + daily.toFixed(2).replace(".", ",");
+                if (dur > 0) {
+                    const total = daily * dur;
+                    document.getElementById("bp-total").textContent =
+                        "$" + total.toFixed(2).replace(".", ",");
+                } else {
+                    document.getElementById("bp-total").textContent =
+                        "Contínuo";
+                }
+                document.querySelectorAll(".budget-btn").forEach((b) => {
+                    b.classList.toggle(
+                        "active",
+                        parseFloat(b.textContent.replace("$", "")) === daily,
+                    );
+                });
+            }
+
+            /* ═══ MODELO (DADOS PADRÃO) ═══ */
+            let modeloData = {};
+            try {
+                modeloData = JSON.parse(
+                    localStorage.getItem("ic_modelo") || "{}",
+                );
+            } catch (e) {
+                modeloData = {};
+            }
+
+            function salvarModelo() {
+                const pos = [];
+                document
+                    .querySelectorAll("#m-posicionamentos input:checked")
+                    .forEach((c) => pos.push(c.value));
+                modeloData = {
+                    nome: document.getElementById("m-nome").value.trim(),
+                    wpp: document.getElementById("m-wpp").value.trim(),
+                    cidade: document.getElementById("m-cidade").value.trim(),
+                    estado: document.getElementById("m-estado").value,
+                    idadeMin: document.getElementById("m-idade-min").value,
+                    idadeMax: document.getElementById("m-idade-max").value,
+                    raio: document.getElementById("m-raio").value,
+                    genero: document.getElementById("m-genero").value,
+                    interesses: document
+                        .getElementById("m-interesses")
+                        .value.trim(),
+                    pagamento: document
+                        .getElementById("m-pagamento")
+                        .value.trim(),
+                    posicionamentos: pos,
+                };
+                localStorage.setItem("ic_modelo", JSON.stringify(modeloData));
+                document.getElementById("modelo-status").style.display =
+                    "block";
+                toast("Dados padrão salvos com sucesso!");
+            }
+
+            function loadModelo() {
+                if (!modeloData.wpp && !modeloData.cidade) return;
+                document.getElementById("m-nome").value = modeloData.nome || "";
+                document.getElementById("m-wpp").value = modeloData.wpp || "";
+                document.getElementById("m-cidade").value =
+                    modeloData.cidade || "";
+                document.getElementById("m-estado").value =
+                    modeloData.estado || "";
+                document.getElementById("m-idade-min").value =
+                    modeloData.idadeMin || 25;
+                document.getElementById("m-idade-max").value =
+                    modeloData.idadeMax || 55;
+                document.getElementById("m-raio").value =
+                    modeloData.raio || "100";
+                document.getElementById("m-genero").value =
+                    modeloData.genero || "todos";
+                document.getElementById("m-interesses").value =
+                    modeloData.interesses || "";
+                document.getElementById("m-pagamento").value =
+                    modeloData.pagamento || "";
+                if (modeloData.posicionamentos) {
+                    document
+                        .querySelectorAll("#m-posicionamentos input")
+                        .forEach((c) => {
+                            c.checked = modeloData.posicionamentos.includes(
+                                c.value,
+                            );
+                        });
+                }
+                if (modeloData.wpp || modeloData.cidade) {
+                    document.getElementById("modelo-status").style.display =
+                        "block";
+                }
+            }
+
+            function getModelo() {
+                return {
+                    nome: modeloData.nome || "Império Caminhões",
+                    wpp: modeloData.wpp || "(a definir)",
+                    cidade: modeloData.cidade
+                        ? modeloData.cidade +
+                          (modeloData.estado ? ", " + modeloData.estado : "")
+                        : "Brasil",
+                    idadeMin: modeloData.idadeMin || "25",
+                    idadeMax: modeloData.idadeMax || "55",
+                    raio: modeloData.raio || "100",
+                    genero: modeloData.genero || "todos",
+                    interesses:
+                        modeloData.interesses ||
+                        "Transporte rodoviário, Caminhões, Logística, Frete",
+                    pagamento:
+                        modeloData.pagamento ||
+                        "Financiamento, consórcio, troca com troco",
+                    posicionamentos: (
+                        modeloData.posicionamentos || [
+                            "Feed Facebook",
+                            "Feed Instagram",
+                            "Stories",
+                            "Reels",
+                        ]
+                    ).join(", "),
+                };
+            }
+
+            /* ═══ GENERATE AD ═══ */
+            const GENERO_MAP = { todos: 'all', masculino: 'male', feminino: 'female' };
+
+            async function gerarAnuncio() {
+                const modelo = document.getElementById("f-modelo").value.trim();
+                const cor = document.getElementById("f-cor").value.trim();
+                const ano = document.getElementById("f-ano").value.trim();
+                if (!modelo || !cor || !ano) {
+                    toast("Preencha modelo, cor e ano!");
+                    return;
+                }
+                if (!modeloData.wpp || !modeloData.cidade || !modeloData.estado) {
+                    toast("Configure os dados padrão antes de criar um anúncio!");
+                    nav("modelo");
+                    return;
+                }
+
+                const preco = document.getElementById("f-preco").value.trim() || null;
+                const km = document.getElementById("f-km").value.trim() || null;
+                const budget = parseFloat(document.getElementById("f-budget").value) || 10;
+                const duracao = parseInt(document.getElementById("f-duracao").value) || 0;
+
+                document.getElementById("loading-box").style.display = "block";
+                document.getElementById("btn-gerar").disabled = true;
+
+                const msgs = [
+                    "Analisando padrão de anúncios...",
+                    "Gerando copy persuasivo...",
+                    "Criando roteiro de vídeo...",
+                    "Montando configuração da campanha...",
+                ];
+                let mi = 0;
+                const iv = setInterval(() => {
+                    mi = (mi + 1) % msgs.length;
+                    document.getElementById("loading-msg").textContent = msgs[mi];
+                }, 2000);
+
+                const payload = {
+                    modelo,
+                    cor,
+                    ano,
+                    preco,
+                    km,
+                    budget,
+                    duracao,
+                    vendedor_nome: modeloData.nome || 'Império Caminhões',
+                    vendedor_wpp: modeloData.wpp,
+                    cidade: modeloData.cidade,
+                    estado: modeloData.estado,
+                    publico_idade_min: parseInt(modeloData.idadeMin) || 18,
+                    publico_idade_max: parseInt(modeloData.idadeMax) || 65,
+                    publico_raio: parseInt(modeloData.raio) || 50,
+                    publico_genero: GENERO_MAP[modeloData.genero] || 'all',
+                    publico_interesses: modeloData.interesses || '',
+                    publico_posicionamentos: modeloData.posicionamentos || [],
+                };
+
+                try {
+                    await apiCall('POST', '/ads/truck/', payload);
+                    clearInterval(iv);
+                    document.getElementById("loading-box").style.display = "none";
+                    toast(`"${modelo} ${cor} ${ano}" criado com sucesso!`);
+                    document.getElementById("f-modelo").value = "";
+                    document.getElementById("f-cor").value = "";
+                    document.getElementById("f-ano").value = "";
+                    document.getElementById("f-preco").value = "";
+                    document.getElementById("f-km").value = "";
+                    document.getElementById("f-budget").value = "10";
+                    document.getElementById("preview-imgs").innerHTML = "";
+                    selectedImages = [];
+                    updateBudgetPreview();
+                    nav("campanhas");
+                } catch (err) {
+                    clearInterval(iv);
+                    document.getElementById("loading-box").style.display = "none";
+                    toast("Erro ao criar anúncio: " + err.message);
+                    console.error(err);
+                }
+                document.getElementById("btn-gerar").disabled = false;
+            }
+
+            /* ═══ AD ACTIONS ═══ */
+            async function toggleStatus(campaignId, currentStatus) {
+                try {
+                    const action = currentStatus === 'ativo' ? 'pausar' : 'ativar';
+                    const result = await apiCall('PATCH', `/ads/truck/${campaignId}/${action}`);
+                    await loadAds();
+                    renderCampanhas();
+                    renderDashboard();
+                    toast(result.status === 'ativo' ? 'Campanha ativada!' : 'Campanha pausada.');
+                } catch (err) {
+                    toast('Erro: ' + err.message);
+                }
+            }
+            async function excluir(campaignId) {
+                if (!confirm("Excluir este anúncio?")) return;
+                try {
+                    await apiCall('DELETE', `/ads/truck/${campaignId}`);
+                    await loadAds();
+                    renderCampanhas();
+                    renderDashboard();
+                    toast("Anúncio excluído.");
+                } catch (err) {
+                    toast('Erro ao excluir: ' + err.message);
+                }
+            }
+
+            /* ═══ RENDER AD CARD ═══ */
+            function adCardHTML(ad) {
+                const sc =
+                    {
+                        ativo: "badge-active",
+                        pausado: "badge-paused",
+                        rascunho: "badge-draft",
+                    }[ad.status] || "badge-draft";
+                const sl =
+                    {
+                        ativo: "Ativo",
+                        pausado: "Pausado",
+                        rascunho: "Rascunho",
+                    }[ad.status] || ad.status;
+                const tl = ad.status === "ativo" ? "Pausar" : "Ativar";
+                return `<div class="ad-card">
+    <div class="ad-thumb">🚛</div>
+    <div class="ad-info">
+      <div class="ad-name">${ad.modelo} ${ad.cor} ${ad.ano}</div>
+      <div class="ad-meta">${ad.cidade} · ${ad.preco || '—'} · ${ad.km || "—"}</div>
+      <span class="badge ${sc}">${sl}</span>
+    </div>
+    <div class="ad-stats">
+      <div class="ad-stat"><div class="ad-stat-val">${ad.leads}</div><div class="ad-stat-lbl">Leads</div></div>
+      <div class="ad-stat"><div class="ad-stat-val">R$${ad.spend}</div><div class="ad-stat-lbl">Investido</div></div>
+    </div>
+    <div class="ad-actions">
+      <button class="btn btn-outline btn-sm" onclick="toggleStatus('${ad.campaign_id}', '${ad.status}')">${tl}</button>
+      <button class="btn btn-outline btn-sm danger" onclick="excluir('${ad.campaign_id}')">Excluir</button>
+    </div>
+  </div>`;
+            }
+            function emptyHTML(icon, title, sub) {
+                return `<div class="empty"><div class="empty-icon">${icon}</div><div class="empty-title">${title}</div><div class="empty-sub">${sub}</div></div>`;
+            }
+
+            /* ═══ RENDER PANELS ═══ */
+            function renderDashboard() {
+                const ativos = ads.filter((a) => a.status === "ativo").length;
+                const leads = ads.reduce((s, a) => s + (a.leads || 0), 0);
+                const spend = ads.reduce((s, a) => s + (a.spend || 0), 0);
+                document.getElementById("m-active").textContent = ativos;
+                document.getElementById("m-leads").textContent = leads;
+                document.getElementById("m-spend").textContent = "R$" + spend.toFixed(2).replace(".", ",");
+                document.getElementById("m-cpl").textContent =
+                    leads > 0 ? "R$" + (spend / leads).toFixed(2).replace(".", ",") : "—";
+                const c = document.getElementById("dash-ads");
+                c.innerHTML =
+                    ads.length === 0
+                        ? emptyHTML(
+                              "🚛",
+                              "Nenhum anúncio criado ainda",
+                              'Clique em "Novo anúncio" para começar',
+                          )
+                        : ads.slice(-5).reverse().map(adCardHTML).join("");
+            }
+            function renderCampanhas() {
+                const q = (
+                    document.getElementById("search-camp")?.value || ""
+                ).toLowerCase();
+                const st =
+                    document.getElementById("filter-status")?.value || "";
+                const filtered = ads.filter((a) => {
+                    const m = `${a.modelo} ${a.cor} ${a.ano} ${a.cidade}`
+                        .toLowerCase()
+                        .includes(q);
+                    const s = !st || a.status === st;
+                    return m && s;
+                });
+                const c = document.getElementById("camp-list");
+                c.innerHTML =
+                    filtered.length === 0
+                        ? emptyHTML(
+                              "📋",
+                              "Nenhuma campanha encontrada",
+                              "Crie um anúncio ou ajuste os filtros",
+                          )
+                        : filtered.map(adCardHTML).join("");
+            }
+            function renderMetricas() {
+                document.getElementById("mt-total").textContent = ads.length;
+                document.getElementById("mt-ativos").textContent = ads.filter(
+                    (a) => a.status === "ativo",
+                ).length;
+                document.getElementById("mt-orc").textContent =
+                    "R$" + ads.reduce((s, a) => s + (a.spend || 0), 0).toFixed(2).replace(".", ",");
+                const c = document.getElementById("met-list");
+                c.innerHTML =
+                    ads.length === 0
+                        ? emptyHTML(
+                              "📊",
+                              "Sem dados ainda",
+                              "Os dados aparecem após criar anúncios",
+                          )
+                        : ads
+                              .map(
+                                  (ad) => `<div class="ad-card">
+      <div class="ad-thumb">🚛</div>
+      <div class="ad-info"><div class="ad-name">${ad.modelo} ${ad.cor} ${ad.ano}</div><div class="ad-meta">${ad.cidade} · ${ad.created || "—"}</div></div>
+      <div class="ad-stats">
+        <div class="ad-stat"><div class="ad-stat-val">${ad.leads}</div><div class="ad-stat-lbl">Leads</div></div>
+        <div class="ad-stat"><div class="ad-stat-val">R$${ad.spend}</div><div class="ad-stat-lbl">Investido</div></div>
+        <div class="ad-stat"><div class="ad-stat-val">${ad.leads > 0 ? "R$" + Math.round(ad.spend / ad.leads) : "—"}</div><div class="ad-stat-lbl">CPL</div></div>
+      </div>
+    </div>`,
+                              )
+                              .join("");
+            }
+
+            /* ═══ INIT ═══ */
+            (async () => { await loadAds(); renderDashboard(); })();
+        </script>
+    </body>
+</html>
