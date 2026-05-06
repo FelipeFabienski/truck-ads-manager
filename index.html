@@ -1528,7 +1528,7 @@
 
         <script>
             /* ═══ CONFIG ═══ */
-            const API_BASE = 'http://localhost:8000';
+            const API_BASE = window.location.origin;
 
             /* ═══ STATE ═══ */
             let ads = [];
@@ -1761,35 +1761,6 @@
                 }
             }
 
-            function getModelo() {
-                return {
-                    nome: modeloData.nome || "Império Caminhões",
-                    wpp: modeloData.wpp || "(a definir)",
-                    cidade: modeloData.cidade
-                        ? modeloData.cidade +
-                          (modeloData.estado ? ", " + modeloData.estado : "")
-                        : "Brasil",
-                    idadeMin: modeloData.idadeMin || "25",
-                    idadeMax: modeloData.idadeMax || "55",
-                    raio: modeloData.raio || "100",
-                    genero: modeloData.genero || "todos",
-                    interesses:
-                        modeloData.interesses ||
-                        "Transporte rodoviário, Caminhões, Logística, Frete",
-                    pagamento:
-                        modeloData.pagamento ||
-                        "Financiamento, consórcio, troca com troco",
-                    posicionamentos: (
-                        modeloData.posicionamentos || [
-                            "Feed Facebook",
-                            "Feed Instagram",
-                            "Stories",
-                            "Reels",
-                        ]
-                    ).join(", "),
-                };
-            }
-
             /* ═══ GENERATE AD ═══ */
             const GENERO_MAP = { todos: 'all', masculino: 'male', feminino: 'female' };
 
@@ -1818,7 +1789,6 @@
                 const msgs = [
                     "Analisando padrão de anúncios...",
                     "Gerando copy persuasivo...",
-                    "Criando roteiro de vídeo...",
                     "Montando configuração da campanha...",
                 ];
                 let mi = 0;
