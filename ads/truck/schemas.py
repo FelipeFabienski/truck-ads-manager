@@ -1,13 +1,10 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class TruckAdCreateRequest(BaseModel):
-    """
-    DTO exato que espelha o formulário do frontend.
-    Todos os campos string vêm como texto — o serviço faz as conversões necessárias.
-    """
+    """DTO exato que espelha o formulário do frontend."""
 
     # Dados do caminhão
     modelo: str = Field(..., min_length=2)
@@ -65,7 +62,14 @@ class TruckAdCreateRequest(BaseModel):
 
 
 class AIGeneratedContent(BaseModel):
-    copy: str
+    """Conteúdo gerado pela IA para um anúncio.
+
+    O campo Python é `ad_copy`; o alias `copy` preserva o contrato de API/JSON.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    ad_copy: str = Field(alias="copy")
     headline: str
     roteiro: str
 
@@ -73,11 +77,13 @@ class AIGeneratedContent(BaseModel):
 class TruckAdPublishResponse(BaseModel):
     """Resposta achatada retornada ao frontend após a publicação."""
 
+    model_config = ConfigDict(populate_by_name=True)
+
     id: int = Field(description="ID baseado em timestamp (ms) para o frontend")
-    campaign_id: str = Field(description="ID interno da campanha no provider")
+    campaign_id: str = Field(description="ID interno da campanha")
     status: str = "rascunho"
 
-    # Dados do caminhão
+    # Dados do caminhão (lidos do banco após persistência)
     modelo: str
     cor: str
     ano: str
@@ -86,7 +92,7 @@ class TruckAdPublishResponse(BaseModel):
     km: str = ""
 
     # Conteúdo gerado pela IA
-    copy: str
+    ad_copy: str = Field(alias="copy")
     headline: str
     roteiro: str
 

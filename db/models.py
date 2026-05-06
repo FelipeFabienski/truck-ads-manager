@@ -20,7 +20,8 @@ class CampaignModel(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     campaign_id = Column(String, unique=True, nullable=False, index=True)
-    external_ad_id = Column(String, nullable=True)
+    # Python attr: external_id — DB column kept as external_ad_id (no migration needed)
+    external_id = Column("external_ad_id", String, nullable=True)
 
     modelo = Column(String, nullable=False)
     cor = Column(String, nullable=False)

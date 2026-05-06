@@ -34,11 +34,11 @@ class CampaignRepository:
         self.db.refresh(record)
         return record
 
-    def update_external_id(self, campaign_id: str, external_ad_id: str) -> None:
+    def update_external_id(self, campaign_id: str, external_id: str) -> None:
         """Salva o ID retornado pela plataforma de anúncios após a publicação."""
         record = self.get_by_id(campaign_id)
         if record:
-            record.external_ad_id = external_ad_id
+            record.external_id = external_id
             self.db.commit()
 
     def delete(self, campaign_id: str) -> None:

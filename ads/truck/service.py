@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
@@ -15,7 +16,9 @@ if TYPE_CHECKING:
     from db.models import CampaignModel
     from db.repository import CampaignRepository
 
-# Transições válidas usando status PT (igual ao armazenado no banco)
+logger = logging.getLogger(__name__)
+
+# Valid status transitions stored in DB (PT — presentation language)
 _VALID_TRANSITIONS: dict[str, set[str]] = {
     "rascunho": {"ativo"},
     "ativo": {"pausado"},
@@ -23,18 +26,90 @@ _VALID_TRANSITIONS: dict[str, set[str]] = {
 }
 
 
+# ── Infrastructure adapter ────────────────────────────────────────────────────
+
+class _ProviderAdapter:
+    """Converts domain objects into AdsProvider payloads.
+
+    Isolates the service from the provider's wire format.
+    All provider-specific dict structure lives here, not in the service.
+    """
+
+    @staticmethod
+    def build_payload(req: TruckAdCreateRequest, ai: AIGeneratedContent) -> dict:
+        interests = [i.strip() for i in req.publico_interesses.split(",") if i.strip()]
+        return {
+            "campaign": {
+                "name": f"{req.modelo} {req.ano} — {req.cidade}, {req.estado}",
+                "objective": "OUTCOME_LEADS",
+                "budget": req.budget,
+                "extra": {
+                    "modelo": req.modelo,
+                    "cor": req.cor,
+                    "ano": req.ano,
+                    "preco": req.preco or "",
+                    "km": req.km or "",
+                    "cidade": req.cidade,
+                    "estado": req.estado,
+                    "vendedor_nome": req.vendedor_nome,
+                    "vendedor_wpp": req.vendedor_wpp,
+                },
+            },
+            "adset": {
+                "name": f"Público {req.cidade} {req.publico_idade_min}-{req.publico_idade_max} anos",
+                "budget": req.budget,
+                "schedule": _ProviderAdapter._schedule(req.duracao),
+                "audience": {
+                    "locations": [req.estado],
+                    "age_min": req.publico_idade_min,
+                    "age_max": req.publico_idade_max,
+                    "interests": interests,
+                    "gender": req.publico_genero,
+                    "radius_km": req.publico_raio,
+                },
+            },
+            "ad": {
+                "name": f"Ad — {req.modelo} {req.ano}",
+                "copy": ai.ad_copy,
+                "headline": ai.headline,
+                "creative": {"type": "image", "url": "", "caption": ai.roteiro},
+                "destination": f"https://wa.me/{req.vendedor_wpp}",
+            },
+        }
+
+    @staticmethod
+    def extract_external_id(result: dict) -> str:
+        return str(
+            result.get("campaign", {}).get("id")
+            or result.get("id")
+            or ""
+        )
+
+    @staticmethod
+    def _schedule(duracao: int) -> dict:
+        if duracao <= 0:
+            return {}
+        start = datetime.now(timezone.utc)
+        return {
+            "start_time": start.isoformat(),
+            "end_time": (start + timedelta(days=duracao)).isoformat(),
+        }
+
+
+# ── Domain service ────────────────────────────────────────────────────────────
+
 class TruckAdService:
-    """Orquestrador de domínio para anúncios de caminhões.
+    """Orchestrates truck ad campaigns across the persistence and ads platform layers.
 
-    Suporta dois modos de operação:
+    Two operating modes:
 
-    Legado (repository=None)
-        Estado gerenciado pelo AdsProvider em memória.
-        Usado pelos testes unitários e pelo modo demo.
+    Legacy (repository=None)
+        State managed by AdsProvider in memory.
+        Used by unit tests and demo mode.
 
-    Produção (repository=CampaignRepository)
-        PostgreSQL como fonte de verdade; AdsProvider responsável apenas
-        pela comunicação com a plataforma de anúncios (Meta Ads / mock).
+    Production (repository=CampaignRepository)
+        PostgreSQL as source of truth; AdsProvider handles only external platform
+        communication. All domain state is read from the DB record after persistence.
     """
 
     def __init__(
@@ -47,9 +122,7 @@ class TruckAdService:
     ) -> None:
         self._provider = provider or get_ads_provider(provider_name, **provider_kwargs)
         self._ai = ai_generator or MockAIGenerator()
-        self._repo = repository  # None → modo legado
-
-    # ── Construtores alternativos ──────────────────────────────────────────────
+        self._repo = repository
 
     @classmethod
     def with_mock(cls, ai_generator: AIGeneratorService | None = None) -> "TruckAdService":
@@ -69,27 +142,69 @@ class TruckAdService:
             ai_generator=ai_generator,
         )
 
-    # ── Publicação ─────────────────────────────────────────────────────────────
+    # ── Public API ─────────────────────────────────────────────────────────────
 
     def create_and_publish_truck_ad(
         self, request: TruckAdCreateRequest
     ) -> TruckAdPublishResponse:
-        ai_content: AIGeneratedContent = self._ai.generate(request)
-
+        ai_content = self._ai.generate(request)
         if self._repo is not None:
             return self._create_with_db(request, ai_content)
-
-        # ── Modo legado: provider gerencia estado ──────────────────────────────
-        payload = self._map_to_provider_payload(request, ai_content)
+        # Legacy: provider manages state in memory
+        payload = _ProviderAdapter.build_payload(request, ai_content)
         result = self._provider.publish_ad(payload)
-        return self._build_response(request, ai_content, result)
+        return self._build_legacy_response(request, ai_content, result)
+
+    def list_campaigns_for_frontend(
+        self, filters: dict | None = None
+    ) -> list[dict]:
+        if self._repo is not None:
+            return self._list_from_db(filters)
+        campaigns = self._provider.list_campaigns(filters)
+        return [
+            to_frontend_dto(c, self._safe_get_metrics(c["id"]))
+            for c in campaigns
+        ]
+
+    def pause_campaign(self, campaign_id: str) -> dict:
+        if self._repo is not None:
+            return self._transition(campaign_id, "pausado")
+        result = self._provider.pause_campaign(campaign_id)
+        return {"campaign_id": result["id"], "status": translate_status_to_pt(result["status"])}
+
+    def activate_campaign(self, campaign_id: str) -> dict:
+        if self._repo is not None:
+            return self._transition(campaign_id, "ativo")
+        result = self._provider.activate_campaign(campaign_id)
+        return {"campaign_id": result["id"], "status": translate_status_to_pt(result["status"])}
+
+    def delete_campaign(self, campaign_id: str) -> dict:
+        if self._repo is not None:
+            return self._delete_with_db(campaign_id)
+        return self._provider.delete_campaign(campaign_id)
+
+    def get_campaign_for_frontend(self, campaign_id: str) -> dict:
+        if self._repo is not None:
+            record = self._repo.get_by_id(campaign_id)
+            if not record:
+                raise CampaignNotFound(campaign_id)
+            return self._record_to_dto(record)
+        campaign = self._provider.get_campaign(campaign_id)
+        return to_frontend_dto(campaign, self._safe_get_metrics(campaign_id))
+
+    def get_campaign_metrics(self, campaign_id: str, period: str = "last_7d") -> dict:
+        if self._repo is not None:
+            return self._metrics_from_db(campaign_id, period)
+        return self._provider.get_metrics(campaign_id, period)
+
+    # ── DB mode — write path ───────────────────────────────────────────────────
 
     def _create_with_db(
         self,
         request: TruckAdCreateRequest,
         ai_content: AIGeneratedContent,
     ) -> TruckAdPublishResponse:
-        """Fluxo DB: salva → chama provider → atualiza external_id."""
+        """Persist → publish to provider (non-fatal) → return response from DB record."""
         campaign_id = f"cmp_{uuid.uuid4().hex[:10]}"
 
         record = self._repo.create({  # type: ignore[union-attr]
@@ -114,60 +229,21 @@ class TruckAdService:
             },
         })
 
-        # Publicação no provider é não-fatal: DB é a fonte de verdade
+        # Provider publish is best-effort — DB is the source of truth
         try:
-            payload = self._map_to_provider_payload(request, ai_content)
+            payload = _ProviderAdapter.build_payload(request, ai_content)
             result = self._provider.publish_ad(payload)
-            external_id = str(
-                result.get("campaign", {}).get("id")
-                or result.get("id")
-                or ""
-            )
+            external_id = _ProviderAdapter.extract_external_id(result)
             if external_id:
                 self._repo.update_external_id(campaign_id, external_id)  # type: ignore[union-attr]
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning(
+                "Provider publish failed for campaign %s — saved as draft. Reason: %s",
+                campaign_id, exc,
+            )
 
-        return self._build_response_from_record(request, ai_content, record)
-
-    # ── Listagem ───────────────────────────────────────────────────────────────
-
-    def list_campaigns_for_frontend(
-        self, filters: dict | None = None
-    ) -> list[dict]:
-        if self._repo is not None:
-            return self._list_from_db(filters)
-
-        # Modo legado
-        campaigns = self._provider.list_campaigns(filters)
-        output = []
-        for campaign in campaigns:
-            metrics = self._safe_get_metrics(campaign["id"])
-            output.append(to_frontend_dto(campaign, metrics))
-        return output
-
-    def _list_from_db(self, filters: dict | None) -> list[dict]:
-        filters = filters or {}
-        # Router envia status em EN ("active"); banco armazena em PT ("ativo")
-        status_en = filters.get("status")
-        status_pt = translate_status_to_pt(status_en) if status_en else None
-        nome = filters.get("name_contains")
-        records = self._repo.get_all(status=status_pt, nome=nome)  # type: ignore[union-attr]
-        return [self._model_to_dto(r) for r in records]
-
-    # ── Controle de estado ─────────────────────────────────────────────────────
-
-    def pause_campaign(self, campaign_id: str) -> dict:
-        if self._repo is not None:
-            return self._transition(campaign_id, "pausado")
-        result = self._provider.pause_campaign(campaign_id)
-        return {"campaign_id": result["id"], "status": translate_status_to_pt(result["status"])}
-
-    def activate_campaign(self, campaign_id: str) -> dict:
-        if self._repo is not None:
-            return self._transition(campaign_id, "ativo")
-        result = self._provider.activate_campaign(campaign_id)
-        return {"campaign_id": result["id"], "status": translate_status_to_pt(result["status"])}
+        # Response built entirely from the persisted record, not from the request
+        return self._build_db_response(ai_content, record)
 
     def _transition(self, campaign_id: str, target: str) -> dict:
         record = self._repo.get_by_id(campaign_id)  # type: ignore[union-attr]
@@ -176,134 +252,107 @@ class TruckAdService:
         if target not in _VALID_TRANSITIONS.get(record.status, set()):
             raise InvalidTransition(record.status, target)
         self._repo.update_status(campaign_id, target)  # type: ignore[union-attr]
-        # Notifica o provider de forma não-fatal
-        try:
-            action = self._provider.pause_campaign if target == "pausado" else self._provider.activate_campaign
-            action(record.external_ad_id or campaign_id)
-        except Exception:
-            pass
+        self._notify_provider_status(record.external_id or campaign_id, target)
         return {"campaign_id": campaign_id, "status": target}
 
-    # ── Delete ────────────────────────────────────────────────────────────────
+    def _delete_with_db(self, campaign_id: str) -> dict:
+        record = self._repo.get_by_id(campaign_id)  # type: ignore[union-attr]
+        if not record:
+            raise CampaignNotFound(campaign_id)
+        self._notify_provider_delete(record.external_id or campaign_id)
+        self._repo.delete(campaign_id)  # type: ignore[union-attr]
+        return {"deleted": True, "campaign_id": campaign_id}
 
-    def delete_campaign(self, campaign_id: str) -> dict:
-        if self._repo is not None:
-            record = self._repo.get_by_id(campaign_id)
-            if not record:
-                raise CampaignNotFound(campaign_id)
-            try:
-                self._provider.delete_campaign(record.external_ad_id or campaign_id)
-            except Exception:
-                pass
-            self._repo.delete(campaign_id)
-            return {"deleted": True, "campaign_id": campaign_id}
-        return self._provider.delete_campaign(campaign_id)
+    # ── DB mode — read path ────────────────────────────────────────────────────
 
-    # ── Detalhe e métricas ─────────────────────────────────────────────────────
+    def _list_from_db(self, filters: dict | None) -> list[dict]:
+        filters = filters or {}
+        # Router sends status in EN ("active"); DB stores in PT ("ativo")
+        status_en = filters.get("status")
+        status_pt = translate_status_to_pt(status_en) if status_en else None
+        records = self._repo.get_all(  # type: ignore[union-attr]
+            status=status_pt,
+            nome=filters.get("name_contains"),
+        )
+        return [self._record_to_dto(r) for r in records]
 
-    def get_campaign_for_frontend(self, campaign_id: str) -> dict:
-        if self._repo is not None:
-            record = self._repo.get_by_id(campaign_id)
-            if not record:
-                raise CampaignNotFound(campaign_id)
-            return self._model_to_dto(record)
-        campaign = self._provider.get_campaign(campaign_id)
-        metrics = self._safe_get_metrics(campaign_id)
-        return to_frontend_dto(campaign, metrics)
+    def _metrics_from_db(self, campaign_id: str, period: str) -> dict:
+        record = self._repo.get_by_id(campaign_id)  # type: ignore[union-attr]
+        if not record:
+            raise CampaignNotFound(campaign_id)
+        try:
+            return self._provider.get_metrics(record.external_id or campaign_id, period)
+        except Exception:
+            return {
+                "campaign_id": campaign_id,
+                "impressions": 0,
+                "clicks": 0,
+                "leads": record.leads or 0,
+                "spent": record.spend or 0.0,
+                "cpl": 0.0,
+                "period": period,
+            }
 
-    def get_campaign_metrics(self, campaign_id: str, period: str = "last_7d") -> dict:
-        if self._repo is not None:
-            record = self._repo.get_by_id(campaign_id)
-            if not record:
-                raise CampaignNotFound(campaign_id)
-            try:
-                return self._provider.get_metrics(
-                    record.external_ad_id or campaign_id, period
-                )
-            except Exception:
-                return {
-                    "campaign_id": campaign_id,
-                    "impressions": 0,
-                    "clicks": 0,
-                    "leads": record.leads or 0,
-                    "spent": record.spend or 0.0,
-                    "cpl": 0.0,
-                    "period": period,
-                }
-        return self._provider.get_metrics(campaign_id, period)
+    # ── Provider notifications (best-effort, non-fatal) ────────────────────────
 
-    # ── Mapeamento (request + IA) → AdsProvider payload ───────────────────────
+    def _notify_provider_status(self, external_id: str, target: str) -> None:
+        try:
+            action = (
+                self._provider.pause_campaign
+                if target == "pausado"
+                else self._provider.activate_campaign
+            )
+            action(external_id)
+        except Exception as exc:
+            logger.warning(
+                "Provider status sync failed for %s → %s: %s", external_id, target, exc
+            )
 
-    def _map_to_provider_payload(
+    def _notify_provider_delete(self, external_id: str) -> None:
+        try:
+            self._provider.delete_campaign(external_id)
+        except Exception as exc:
+            logger.warning("Provider delete failed for %s: %s", external_id, exc)
+
+    # ── DTO builders ───────────────────────────────────────────────────────────
+
+    def _build_db_response(
         self,
-        req: TruckAdCreateRequest,
-        ai: AIGeneratedContent,
-    ) -> dict:
-        interests = [i.strip() for i in req.publico_interesses.split(",") if i.strip()]
-        schedule = self._build_schedule(req.duracao)
+        ai_content: AIGeneratedContent,
+        record: "CampaignModel",
+    ) -> TruckAdPublishResponse:
+        """Builds response from the persisted record — request data is NOT used."""
+        dt = record.created_at or datetime.now(timezone.utc)
+        return TruckAdPublishResponse(
+            id=int(dt.timestamp() * 1000),
+            campaign_id=record.campaign_id,
+            status=record.status,
+            modelo=record.modelo,
+            cor=record.cor,
+            ano=record.ano,
+            cidade=record.cidade,
+            preco=record.preco or "",
+            km=record.km or "",
+            copy=ai_content.ad_copy,
+            headline=ai_content.headline,
+            roteiro=ai_content.roteiro,
+            budget=record.budget,
+            created=dt.strftime("%d/%m/%Y"),
+        )
 
-        return {
-            "campaign": {
-                "name": f"{req.modelo} {req.ano} — {req.cidade}, {req.estado}",
-                "objective": "OUTCOME_LEADS",
-                "budget": req.budget,
-                "extra": {
-                    "modelo": req.modelo,
-                    "cor": req.cor,
-                    "ano": req.ano,
-                    "preco": req.preco or "",
-                    "km": req.km or "",
-                    "cidade": req.cidade,
-                    "estado": req.estado,
-                    "vendedor_nome": req.vendedor_nome,
-                    "vendedor_wpp": req.vendedor_wpp,
-                },
-            },
-            "adset": {
-                "name": (
-                    f"Público {req.cidade} "
-                    f"{req.publico_idade_min}-{req.publico_idade_max} anos"
-                ),
-                "budget": req.budget,
-                "schedule": schedule,
-                "audience": {
-                    "locations": [req.estado],
-                    "age_min": req.publico_idade_min,
-                    "age_max": req.publico_idade_max,
-                    "interests": interests,
-                    "gender": req.publico_genero,
-                    "radius_km": req.publico_raio,
-                },
-            },
-            "ad": {
-                "name": f"Ad — {req.modelo} {req.ano}",
-                "copy": ai.copy,
-                "headline": ai.headline,
-                "creative": {
-                    "type": "image",
-                    "url": "",
-                    "caption": ai.roteiro,
-                },
-                "destination": f"https://wa.me/{req.vendedor_wpp}",
-            },
-        }
-
-    # ── Construtores de resposta ───────────────────────────────────────────────
-
-    def _build_response(
+    def _build_legacy_response(
         self,
         req: TruckAdCreateRequest,
         ai: AIGeneratedContent,
         publish_result: dict,
     ) -> TruckAdPublishResponse:
-        """Modo legado — constrói resposta a partir do dict retornado pelo provider."""
+        """Legacy mode — builds response from the provider result dict."""
         campaign = publish_result.get("campaign", {})
         created_at = campaign.get("created_at") or datetime.now(timezone.utc).isoformat()
         try:
             dt = datetime.fromisoformat(created_at)
         except (ValueError, TypeError):
             dt = datetime.now(timezone.utc)
-
         return TruckAdPublishResponse(
             id=int(dt.timestamp() * 1000),
             campaign_id=campaign.get("id", ""),
@@ -314,40 +363,15 @@ class TruckAdService:
             cidade=f"{req.cidade}, {req.estado}",
             preco=req.preco or "",
             km=req.km or "",
-            copy=ai.copy,
+            copy=ai.ad_copy,
             headline=ai.headline,
             roteiro=ai.roteiro,
             budget=req.budget,
             created=dt.strftime("%d/%m/%Y"),
         )
 
-    def _build_response_from_record(
-        self,
-        req: TruckAdCreateRequest,
-        ai: AIGeneratedContent,
-        record: "CampaignModel",
-    ) -> TruckAdPublishResponse:
-        """Modo DB — constrói resposta a partir do ORM model."""
-        dt = record.created_at or datetime.now(timezone.utc)
-        return TruckAdPublishResponse(
-            id=int(dt.timestamp() * 1000),
-            campaign_id=record.campaign_id,
-            status="rascunho",
-            modelo=req.modelo,
-            cor=req.cor,
-            ano=req.ano,
-            cidade=record.cidade,
-            preco=req.preco or "",
-            km=req.km or "",
-            copy=ai.copy,
-            headline=ai.headline,
-            roteiro=ai.roteiro,
-            budget=req.budget,
-            created=dt.strftime("%d/%m/%Y"),
-        )
-
-    def _model_to_dto(self, record: "CampaignModel") -> dict:
-        """Converte CampaignModel para o contrato de frontend."""
+    def _record_to_dto(self, record: "CampaignModel") -> dict:
+        """Converts a CampaignModel to the frontend contract dict."""
         dt = record.created_at or datetime.now(timezone.utc)
         td = record.targeting_data or {}
         return {
@@ -366,20 +390,23 @@ class TruckAdService:
             "wpp": td.get("vendedor_wpp", ""),
         }
 
-    # ── Helpers ────────────────────────────────────────────────────────────────
+    # ── Backward-compatible aliases (used by unit tests) ───────────────────────
+
+    def _map_to_provider_payload(
+        self,
+        req: TruckAdCreateRequest,
+        ai: AIGeneratedContent,
+    ) -> dict:
+        return _ProviderAdapter.build_payload(req, ai)
 
     @staticmethod
     def _build_schedule(duracao: int) -> dict:
-        if duracao <= 0:
-            return {}
-        start = datetime.now(timezone.utc)
-        return {
-            "start_time": start.isoformat(),
-            "end_time": (start + timedelta(days=duracao)).isoformat(),
-        }
+        return _ProviderAdapter._schedule(duracao)
+
+    # ── Helpers ────────────────────────────────────────────────────────────────
 
     def _safe_get_metrics(self, campaign_id: str) -> dict:
         try:
             return self._provider.get_metrics(campaign_id)
-        except AdsError:
+        except Exception:
             return {}
