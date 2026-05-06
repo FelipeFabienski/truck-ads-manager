@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from sqlalchemy.orm import Session
 
-from ads.exceptions import CampaignNotFound
 from db.models import CampaignModel
 
 
@@ -27,22 +26,18 @@ class CampaignRepository:
         self.db.refresh(record)
         return record
 
-    def update_status(self, campaign_id: str, status: str) -> CampaignModel:
-        record = self._require(campaign_id)
+    def update_record_status(self, record: CampaignModel, status: str) -> None:
+        """Updates status on an already-fetched record — avoids a second DB roundtrip."""
         record.status = status
         self.db.commit()
-        self.db.refresh(record)
-        return record
 
-    def update_external_id(self, campaign_id: str, external_id: str) -> None:
-        """Salva o ID retornado pela plataforma de anúncios após a publicação."""
-        record = self.get_by_id(campaign_id)
-        if record:
-            record.external_id = external_id
-            self.db.commit()
+    def update_record_external_id(self, record: CampaignModel, external_id: str) -> None:
+        """Sets external_id on an already-fetched record — avoids a second DB roundtrip."""
+        record.external_id = external_id
+        self.db.commit()
 
-    def delete(self, campaign_id: str) -> None:
-        record = self._require(campaign_id)
+    def delete_record(self, record: CampaignModel) -> None:
+        """Deletes an already-fetched record — avoids a second DB roundtrip."""
         self.db.delete(record)
         self.db.commit()
 
@@ -67,10 +62,3 @@ class CampaignRepository:
             .first()
         )
 
-    # ── Private ───────────────────────────────────────────────────────────────
-
-    def _require(self, campaign_id: str) -> CampaignModel:
-        record = self.get_by_id(campaign_id)
-        if not record:
-            raise CampaignNotFound(campaign_id)
-        return record

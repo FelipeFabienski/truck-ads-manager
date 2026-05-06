@@ -3,9 +3,9 @@ from __future__ import annotations
 import logging
 import uuid
 from datetime import datetime, timedelta, timezone
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
-from ..exceptions import AdsError, CampaignNotFound, InvalidTransition
+from ..exceptions import CampaignNotFound, InvalidTransition
 from ..factory import get_ads_provider
 from ..provider import AdsProvider
 from .adapter import to_frontend_dto, translate_status_to_pt
@@ -229,21 +229,23 @@ class TruckAdService:
             },
         })
 
+        # Build response from the fresh record before any further commit expires it
+        response = self._build_db_response(ai_content, record)
+
         # Provider publish is best-effort — DB is the source of truth
         try:
             payload = _ProviderAdapter.build_payload(request, ai_content)
             result = self._provider.publish_ad(payload)
             external_id = _ProviderAdapter.extract_external_id(result)
             if external_id:
-                self._repo.update_external_id(campaign_id, external_id)  # type: ignore[union-attr]
+                self._repo.update_record_external_id(record, external_id)  # type: ignore[union-attr]
         except Exception as exc:
             logger.warning(
                 "Provider publish failed for campaign %s — saved as draft. Reason: %s",
                 campaign_id, exc,
             )
 
-        # Response built entirely from the persisted record, not from the request
-        return self._build_db_response(ai_content, record)
+        return response
 
     def _transition(self, campaign_id: str, target: str) -> dict:
         record = self._repo.get_by_id(campaign_id)  # type: ignore[union-attr]
@@ -251,8 +253,9 @@ class TruckAdService:
             raise CampaignNotFound(campaign_id)
         if target not in _VALID_TRANSITIONS.get(record.status, set()):
             raise InvalidTransition(record.status, target)
-        self._repo.update_status(campaign_id, target)  # type: ignore[union-attr]
-        self._notify_provider_status(record.external_id or campaign_id, target)
+        external_id = record.external_id  # capture before commit expires the record
+        self._repo.update_record_status(record, target)  # type: ignore[union-attr]
+        self._notify_provider_status(external_id or campaign_id, target)
         return {"campaign_id": campaign_id, "status": target}
 
     def _delete_with_db(self, campaign_id: str) -> dict:
@@ -260,7 +263,7 @@ class TruckAdService:
         if not record:
             raise CampaignNotFound(campaign_id)
         self._notify_provider_delete(record.external_id or campaign_id)
-        self._repo.delete(campaign_id)  # type: ignore[union-attr]
+        self._repo.delete_record(record)  # type: ignore[union-attr]
         return {"deleted": True, "campaign_id": campaign_id}
 
     # ── DB mode — read path ────────────────────────────────────────────────────
@@ -282,7 +285,8 @@ class TruckAdService:
             raise CampaignNotFound(campaign_id)
         try:
             return self._provider.get_metrics(record.external_id or campaign_id, period)
-        except Exception:
+        except Exception as exc:
+            logger.warning("Provider metrics failed for campaign %s: %s", campaign_id, exc)
             return {
                 "campaign_id": campaign_id,
                 "impressions": 0,
@@ -322,23 +326,23 @@ class TruckAdService:
         record: "CampaignModel",
     ) -> TruckAdPublishResponse:
         """Builds response from the persisted record — request data is NOT used."""
-        dt = record.created_at or datetime.now(timezone.utc)
-        return TruckAdPublishResponse(
-            id=int(dt.timestamp() * 1000),
-            campaign_id=record.campaign_id,
-            status=record.status,
-            modelo=record.modelo,
-            cor=record.cor,
-            ano=record.ano,
-            cidade=record.cidade,
-            preco=record.preco or "",
-            km=record.km or "",
-            copy=ai_content.ad_copy,
-            headline=ai_content.headline,
-            roteiro=ai_content.roteiro,
-            budget=record.budget,
-            created=dt.strftime("%d/%m/%Y"),
-        )
+        dt = record.created_at
+        return TruckAdPublishResponse.model_validate({
+            "id": int(dt.timestamp() * 1000),
+            "campaign_id": record.campaign_id,
+            "status": record.status,
+            "modelo": record.modelo,
+            "cor": record.cor,
+            "ano": record.ano,
+            "cidade": record.cidade,
+            "preco": record.preco or "",
+            "km": record.km or "",
+            "copy": ai_content.ad_copy,
+            "headline": ai_content.headline,
+            "roteiro": ai_content.roteiro,
+            "budget": record.budget,
+            "created": dt.strftime("%d/%m/%Y"),
+        })
 
     def _build_legacy_response(
         self,
@@ -353,27 +357,27 @@ class TruckAdService:
             dt = datetime.fromisoformat(created_at)
         except (ValueError, TypeError):
             dt = datetime.now(timezone.utc)
-        return TruckAdPublishResponse(
-            id=int(dt.timestamp() * 1000),
-            campaign_id=campaign.get("id", ""),
-            status="rascunho",
-            modelo=req.modelo,
-            cor=req.cor,
-            ano=req.ano,
-            cidade=f"{req.cidade}, {req.estado}",
-            preco=req.preco or "",
-            km=req.km or "",
-            copy=ai.ad_copy,
-            headline=ai.headline,
-            roteiro=ai.roteiro,
-            budget=req.budget,
-            created=dt.strftime("%d/%m/%Y"),
-        )
+        return TruckAdPublishResponse.model_validate({
+            "id": int(dt.timestamp() * 1000),
+            "campaign_id": campaign.get("id", ""),
+            "status": "rascunho",
+            "modelo": req.modelo,
+            "cor": req.cor,
+            "ano": req.ano,
+            "cidade": f"{req.cidade}, {req.estado}",
+            "preco": req.preco or "",
+            "km": req.km or "",
+            "copy": ai.ad_copy,
+            "headline": ai.headline,
+            "roteiro": ai.roteiro,
+            "budget": req.budget,
+            "created": dt.strftime("%d/%m/%Y"),
+        })
 
-    def _record_to_dto(self, record: "CampaignModel") -> dict:
+    def _record_to_dto(self, record: "CampaignModel") -> dict[str, Any]:
         """Converts a CampaignModel to the frontend contract dict."""
-        dt = record.created_at or datetime.now(timezone.utc)
-        td = record.targeting_data or {}
+        dt = record.created_at
+        td: dict[str, Any] = record.targeting_data or {}
         return {
             "id": int(dt.timestamp() * 1000),
             "campaign_id": record.campaign_id,
@@ -390,7 +394,7 @@ class TruckAdService:
             "wpp": td.get("vendedor_wpp", ""),
         }
 
-    # ── Backward-compatible aliases (used by unit tests) ───────────────────────
+    # ── Backward-compatible alias (used by unit tests) ────────────────────────
 
     def _map_to_provider_payload(
         self,
@@ -399,14 +403,11 @@ class TruckAdService:
     ) -> dict:
         return _ProviderAdapter.build_payload(req, ai)
 
-    @staticmethod
-    def _build_schedule(duracao: int) -> dict:
-        return _ProviderAdapter._schedule(duracao)
-
     # ── Helpers ────────────────────────────────────────────────────────────────
 
     def _safe_get_metrics(self, campaign_id: str) -> dict:
         try:
             return self._provider.get_metrics(campaign_id)
-        except Exception:
+        except Exception as exc:
+            logger.warning("Metrics unavailable for campaign %s: %s", campaign_id, exc)
             return {}

@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from typing import Any
 
-from sqlalchemy import Column, DateTime, Float, Integer, String
+from sqlalchemy import DateTime
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import Mapped, mapped_column
 
 from db.database import Base
 
@@ -11,38 +13,37 @@ from db.database import Base
 class CampaignModel(Base):
     """Registro persistente de uma campanha no SaaS.
 
-    campaign_id  — identificador público da API (gerado por nós, ex: cmp_a1b2c3d4e5)
-    external_ad_id — ID retornado pela plataforma de anúncios (Meta Ads / mock)
+    campaign_id    — identificador público da API (gerado por nós, ex: cmp_a1b2c3d4e5)
+    external_id    — ID retornado pela plataforma de anúncios (Meta Ads / mock)
     targeting_data — snapshot do público configurado no momento da criação (JSONB)
     """
 
     __tablename__ = "campaigns"
 
-    id = Column(Integer, primary_key=True, index=True)
-    campaign_id = Column(String, unique=True, nullable=False, index=True)
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    campaign_id: Mapped[str] = mapped_column(unique=True, index=True)
     # Python attr: external_id — DB column kept as external_ad_id (no migration needed)
-    external_id = Column("external_ad_id", String, nullable=True)
+    external_id: Mapped[str | None] = mapped_column("external_ad_id")
 
-    modelo = Column(String, nullable=False)
-    cor = Column(String, nullable=False)
-    ano = Column(String, nullable=False)
-    preco = Column(String, nullable=True)
-    km = Column(String, nullable=True)
-    cidade = Column(String, nullable=False)
+    modelo: Mapped[str] = mapped_column()
+    cor: Mapped[str] = mapped_column()
+    ano: Mapped[str] = mapped_column()
+    preco: Mapped[str | None] = mapped_column()
+    km: Mapped[str | None] = mapped_column()
+    cidade: Mapped[str] = mapped_column()
 
-    status = Column(String, nullable=False, default="rascunho")
-    budget = Column(Float, nullable=False)
-    leads = Column(Integer, default=0)
-    spend = Column(Float, default=0.0)
+    status: Mapped[str] = mapped_column(default="rascunho")
+    budget: Mapped[float] = mapped_column()
+    leads: Mapped[int | None] = mapped_column(default=0)
+    spend: Mapped[float | None] = mapped_column(default=0.0)
 
-    targeting_data = Column(JSONB, nullable=True)
+    targeting_data: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
 
     # default Python-side garante que created_at está sempre disponível após
     # session.refresh(), inclusive em testes com SQLite (sem server_default).
-    created_at = Column(
+    created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
-        nullable=False,
     )
 
     def __repr__(self) -> str:
