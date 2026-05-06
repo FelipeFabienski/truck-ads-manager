@@ -1,42 +1,36 @@
 from __future__ import annotations
 
 import os
-from functools import lru_cache
 
+from fastapi import Depends
+from sqlalchemy.orm import Session
+
+from ads.factory import get_ads_provider
 from ads.truck.service import TruckAdService
+from db.database import get_db
+from db.repository import CampaignRepository
 
 
-@lru_cache(maxsize=1)
-def _build_service() -> TruckAdService:
-    """
-    Instância singleton do TruckAdService.
-    Lê ADS_PROVIDER do ambiente para escolher o provider:
+def get_truck_service(db: Session = Depends(get_db)) -> TruckAdService:
+    """Dependência FastAPI — instância por request com sessão DB injetada.
 
-        ADS_PROVIDER=mock   (padrão) — in-memory, sem dados pré-carregados
-        ADS_PROVIDER=demo           — in-memory com 3 caminhões de exemplo
-        ADS_PROVIDER=meta           — API real da Meta (requer META_ACCESS_TOKEN
-                                      e META_AD_ACCOUNT_ID no ambiente)
+    ADS_PROVIDER=mock   (padrão) — MockAdsProvider + PostgreSQL
+    ADS_PROVIDER=demo           — igual ao mock (dados demo via seed no banco)
+    ADS_PROVIDER=meta           — Meta Ads real (requer META_ACCESS_TOKEN
+                                  e META_AD_ACCOUNT_ID no ambiente)
     """
     provider_name = os.getenv("ADS_PROVIDER", "mock")
 
     if provider_name == "meta":
-        return TruckAdService.with_meta(
+        provider = get_ads_provider(
+            "meta",
             access_token=os.environ["META_ACCESS_TOKEN"],
             ad_account_id=os.environ["META_AD_ACCOUNT_ID"],
         )
+    else:
+        provider = get_ads_provider("mock")
 
-    if provider_name == "demo":
-        from ads.providers.mock_provider import MockAdsProvider
-        from ads.truck.ai_generator import MockAIGenerator
-
-        return TruckAdService(
-            provider=MockAdsProvider.with_demo_data(),
-            ai_generator=MockAIGenerator(),
-        )
-
-    return TruckAdService.with_mock()
-
-
-def get_truck_service() -> TruckAdService:
-    """FastAPI dependency — injeta o TruckAdService nos endpoints."""
-    return _build_service()
+    return TruckAdService(
+        provider=provider,
+        repository=CampaignRepository(db),
+    )

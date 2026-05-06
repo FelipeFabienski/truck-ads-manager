@@ -17,22 +17,22 @@ _ROOT = Path(__file__).parent.parent
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Força a inicialização do singleton na startup — falha rápido se env vars faltarem
-    from .dependencies import _build_service
-    _build_service()
+    # Cria tabelas no Postgres/Neon na inicialização (idempotente via checkfirst).
+    # Em produção com Alembic, substituir por alembic upgrade head no deploy.
+    from db.database import Base, engine
+    Base.metadata.create_all(bind=engine)
     yield
 
 
 def create_app(title: str = "Truck Ads Manager API") -> FastAPI:
     app = FastAPI(
         title=title,
-        version="1.0.0",
-        description="API de gestão de campanhas de anúncios de caminhões (Meta Ads)",
+        version="2.0.0",
+        description="API de gestão de campanhas de anúncios de caminhões (Meta Ads + PostgreSQL)",
         lifespan=lifespan,
     )
 
     # ── CORS ──────────────────────────────────────────────────────────────────
-    # Em produção, substitua "*" pelos domínios reais via CORS_ORIGINS no env.
     origins = [o.strip() for o in os.getenv("CORS_ORIGINS", "*").split(",")]
     app.add_middleware(
         CORSMiddleware,
@@ -61,5 +61,4 @@ def create_app(title: str = "Truck Ads Manager API") -> FastAPI:
     return app
 
 
-# Instância usada pelo servidor ASGI (uvicorn api.main:app)
 app = create_app()
