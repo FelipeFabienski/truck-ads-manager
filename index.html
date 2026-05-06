@@ -1527,9 +1527,6 @@
         <div class="toast" id="toast"></div>
 
         <script>
-            /* ═══ CONFIG ═══ */
-            const API_BASE = window.location.origin;
-
             /* ═══ STATE ═══ */
             let ads = [];
             let selectedImages = [];
@@ -1538,7 +1535,7 @@
             async function apiCall(method, path, body) {
                 const opts = { method, headers: { 'Content-Type': 'application/json' } };
                 if (body) opts.body = JSON.stringify(body);
-                const res = await fetch(API_BASE + path, opts);
+                const res = await fetch(path, opts);
                 if (!res.ok) {
                     const err = await res.json().catch(() => ({}));
                     throw new Error(err.message || `HTTP ${res.status}`);
