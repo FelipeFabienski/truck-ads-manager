@@ -884,7 +884,7 @@
                             </div>
                             <div class="metric-card">
                                 <div class="metric-label">Investido</div>
-                                <div class="metric-value" id="m-spend">$0</div>
+                                <div class="metric-value" id="m-spend">R$0</div>
                                 <div class="metric-sub">orçamento total</div>
                             </div>
                             <div class="metric-card">
@@ -1015,37 +1015,37 @@
                                             class="budget-btn"
                                             onclick="setBudget(5, this)"
                                         >
-                                            $5
+                                            R$5
                                         </button>
                                         <button
                                             class="budget-btn active"
                                             onclick="setBudget(10, this)"
                                         >
-                                            $10
+                                            R$10
                                         </button>
                                         <button
                                             class="budget-btn"
                                             onclick="setBudget(15, this)"
                                         >
-                                            $15
+                                            R$15
                                         </button>
                                         <button
                                             class="budget-btn"
                                             onclick="setBudget(20, this)"
                                         >
-                                            $20
+                                            R$20
                                         </button>
                                         <button
                                             class="budget-btn"
                                             onclick="setBudget(30, this)"
                                         >
-                                            $30
+                                            R$30
                                         </button>
                                         <button
                                             class="budget-btn"
                                             onclick="setBudget(50, this)"
                                         >
-                                            $50
+                                            R$50
                                         </button>
                                     </div>
                                     <div
@@ -1102,7 +1102,7 @@
                                             <span
                                                 class="budget-preview-val"
                                                 id="bp-daily"
-                                                >$10,00</span
+                                                >R$10,00</span
                                             >
                                         </div>
                                         <div class="budget-preview-row">
@@ -1113,7 +1113,7 @@
                                             <span
                                                 class="budget-preview-val highlight"
                                                 id="bp-total"
-                                                >$70,00</span
+                                                >R$70,00</span
                                             >
                                         </div>
                                     </div>
@@ -1513,7 +1513,7 @@
                             </div>
                             <div class="metric-card">
                                 <div class="metric-label">Orçamento total</div>
-                                <div class="metric-value" id="mt-orc">$0</div>
+                                <div class="metric-value" id="mt-orc">R$0</div>
                             </div>
                         </div>
                         <div class="section-title">Performance por anúncio</div>
@@ -1532,7 +1532,6 @@
 
             /* ═══ STATE ═══ */
             let ads = [];
-            let generatedData = null;
             let selectedImages = [];
 
             /* ═══ API CLIENT ═══ */
@@ -1549,9 +1548,7 @@
 
             async function loadAds() {
                 try {
-                    const res = await fetch(`${API_BASE}/ads/truck/`);
-                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                    ads = await res.json();
+                    ads = await apiCall('GET', '/ads/truck/');
                 } catch (err) {
                     console.error('Erro ao carregar anúncios:', err);
                     toast('Servidor indisponível — verifique o backend');
@@ -1610,28 +1607,8 @@
 
             /* ═══ IMAGES ═══ */
             function handleImages(input) {
-                const files = Array.from(input.files).slice(0, 5);
-                selectedImages = files;
-                const c = document.getElementById("preview-imgs");
-                c.innerHTML = "";
-                files.forEach((file, i) => {
-                    const wrap = document.createElement("div");
-                    wrap.className = "preview-img-wrap";
-                    const img = document.createElement("img");
-                    img.className = "preview-img";
-                    img.src = URL.createObjectURL(file);
-                    const btn = document.createElement("button");
-                    btn.className = "preview-remove";
-                    btn.textContent = "×";
-                    btn.onclick = (e) => {
-                        e.stopPropagation();
-                        selectedImages.splice(i, 1);
-                        handleImagesRefresh();
-                    };
-                    wrap.appendChild(img);
-                    wrap.appendChild(btn);
-                    c.appendChild(wrap);
-                });
+                selectedImages = Array.from(input.files).slice(0, 5);
+                handleImagesRefresh();
             }
             function handleImagesRefresh() {
                 const c = document.getElementById("preview-imgs");
@@ -1671,11 +1648,11 @@
                 const dur =
                     parseInt(document.getElementById("f-duracao").value) || 0;
                 document.getElementById("bp-daily").textContent =
-                    "$" + daily.toFixed(2).replace(".", ",");
+                    "R$" + daily.toFixed(2).replace(".", ",");
                 if (dur > 0) {
                     const total = daily * dur;
                     document.getElementById("bp-total").textContent =
-                        "$" + total.toFixed(2).replace(".", ",");
+                        "R$" + total.toFixed(2).replace(".", ",");
                 } else {
                     document.getElementById("bp-total").textContent =
                         "Contínuo";
@@ -1683,7 +1660,7 @@
                 document.querySelectorAll(".budget-btn").forEach((b) => {
                     b.classList.toggle(
                         "active",
-                        parseFloat(b.textContent.replace("$", "")) === daily,
+                        parseFloat(b.textContent.replace("R$", "")) === daily,
                     );
                 });
             }
