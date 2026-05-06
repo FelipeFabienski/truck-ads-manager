@@ -18,6 +18,7 @@ class CampaignListItem(BaseModel):
     leads: int
     spend: float
     created: str = Field(description="DD/MM/AAAA")
+    wpp: str = Field(default="", description="Número WhatsApp do vendedor")
 
 
 class StatusUpdateResponse(BaseModel):

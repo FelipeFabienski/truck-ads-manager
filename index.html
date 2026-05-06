@@ -239,6 +239,16 @@
                 font-size: 11px;
                 font-weight: 500;
             }
+            .btn-wpp {
+                background: var(--wpp-green);
+                color: #fff;
+                border: none;
+                text-decoration: none;
+                display: inline-flex;
+                align-items: center;
+                gap: 4px;
+            }
+            .btn-wpp:hover { background: #1da851; color: #fff; }
             .btn-full {
                 width: 100%;
                 justify-content: center;
@@ -930,6 +940,7 @@
                                             id="f-ano"
                                             placeholder="Ex: 2023"
                                             maxlength="4"
+                                            oninput="this.value=this.value.replace(/\D/g,'').slice(0,4)"
                                         />
                                     </div>
                                 </div>
@@ -1206,7 +1217,21 @@
                                         ><input
                                             id="m-wpp"
                                             placeholder="Ex: 41999999999"
+                                            maxlength="15"
+                                            oninput="this.value=this.value.replace(/\D/g,'').slice(0,15)"
                                         />
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Mensagem automática do WhatsApp</label>
+                                    <textarea
+                                        id="m-wpp-msg"
+                                        rows="3"
+                                        style="width:100%;resize:vertical;font-size:13px;padding:8px;border:1px solid var(--border);border-radius:6px;font-family:inherit;color:var(--text-primary);background:var(--surface)"
+                                    >Olá! Tenho interesse no [Modelo] [Cor] [Ano], pode me passar mais detalhes?</textarea>
+                                    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px">
+                                        <span style="font-size:11px;color:var(--text-secondary)">[Modelo], [Cor] e [Ano] são substituídos automaticamente.</span>
+                                        <button type="button" onclick="resetWppMsg()" style="font-size:11px;color:var(--text-secondary);background:none;border:none;cursor:pointer;padding:0;text-decoration:underline">Restaurar padrão</button>
                                     </div>
                                 </div>
                                 <div class="form-row c2">
@@ -1273,6 +1298,7 @@
                                             value="25"
                                             min="18"
                                             max="65"
+                                            oninput="this.value=this.value.replace(/\D/g,'').slice(0,2)"
                                         />
                                     </div>
                                     <div class="form-group">
@@ -1283,6 +1309,7 @@
                                             value="55"
                                             min="18"
                                             max="65"
+                                            oninput="this.value=this.value.replace(/\D/g,'').slice(0,2)"
                                         />
                                     </div>
                                 </div>
@@ -1530,6 +1557,10 @@
             /* ═══ STATE ═══ */
             let ads = [];
             let selectedImages = [];
+            const DEFAULT_WPP_MSG = 'Olá! Tenho interesse no [Modelo] [Cor] [Ano], pode me passar mais detalhes?';
+            function resetWppMsg() {
+                document.getElementById('m-wpp-msg').value = DEFAULT_WPP_MSG;
+            }
 
             /* ═══ API CLIENT ═══ */
             async function apiCall(method, path, body) {
@@ -1680,6 +1711,7 @@
                 modeloData = {
                     nome: document.getElementById("m-nome").value.trim(),
                     wpp: document.getElementById("m-wpp").value.trim(),
+                    wppMsg: document.getElementById("m-wpp-msg").value.trim() || DEFAULT_WPP_MSG,
                     cidade: document.getElementById("m-cidade").value.trim(),
                     estado: document.getElementById("m-estado").value,
                     idadeMin: document.getElementById("m-idade-min").value,
@@ -1704,6 +1736,7 @@
                 if (!modeloData.wpp && !modeloData.cidade) return;
                 document.getElementById("m-nome").value = modeloData.nome || "";
                 document.getElementById("m-wpp").value = modeloData.wpp || "";
+                document.getElementById("m-wpp-msg").value = modeloData.wppMsg || DEFAULT_WPP_MSG;
                 document.getElementById("m-cidade").value =
                     modeloData.cidade || "";
                 document.getElementById("m-estado").value =
@@ -1856,6 +1889,15 @@
                         rascunho: "Rascunho",
                     }[ad.status] || ad.status;
                 const tl = ad.status === "ativo" ? "Pausar" : "Ativar";
+                const wpp = ad.wpp || modeloData.wpp || '';
+                const msgTpl = modeloData.wppMsg || DEFAULT_WPP_MSG;
+                const msg = msgTpl
+                    .replace('[Modelo]', ad.modelo)
+                    .replace('[Cor]', ad.cor)
+                    .replace('[Ano]', ad.ano);
+                const wppBtn = wpp
+                    ? `<a class="btn btn-wpp btn-sm" href="https://wa.me/${wpp.replace(/\D/g,'')}?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">Saiba mais</a>`
+                    : '';
                 return `<div class="ad-card">
     <div class="ad-thumb">🚛</div>
     <div class="ad-info">
@@ -1868,6 +1910,7 @@
       <div class="ad-stat"><div class="ad-stat-val">R$${ad.spend}</div><div class="ad-stat-lbl">Investido</div></div>
     </div>
     <div class="ad-actions">
+      ${wppBtn}
       <button class="btn btn-outline btn-sm" onclick="toggleStatus('${ad.campaign_id}', '${ad.status}')">${tl}</button>
       <button class="btn btn-outline btn-sm danger" onclick="excluir('${ad.campaign_id}')">Excluir</button>
     </div>

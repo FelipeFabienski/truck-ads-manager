@@ -349,6 +349,7 @@ class TruckAdService:
     def _model_to_dto(self, record: "CampaignModel") -> dict:
         """Converte CampaignModel para o contrato de frontend."""
         dt = record.created_at or datetime.now(timezone.utc)
+        td = record.targeting_data or {}
         return {
             "id": int(dt.timestamp() * 1000),
             "campaign_id": record.campaign_id,
@@ -362,6 +363,7 @@ class TruckAdService:
             "leads": record.leads or 0,
             "spend": record.spend or 0.0,
             "created": dt.strftime("%d/%m/%Y"),
+            "wpp": td.get("vendedor_wpp", ""),
         }
 
     # ── Helpers ────────────────────────────────────────────────────────────────
