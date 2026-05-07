@@ -754,6 +754,37 @@
                 opacity: 1;
             }
 
+            /* ═══ CONFIRM MODAL ═══ */
+            .modal-overlay {
+                display: none;
+                position: fixed;
+                inset: 0;
+                background: rgba(0,0,0,.45);
+                z-index: 1000;
+                align-items: center;
+                justify-content: center;
+            }
+            .modal-overlay.show { display: flex; }
+            .modal-box {
+                background: var(--bg);
+                border-radius: var(--radius);
+                padding: 28px 32px;
+                max-width: 360px;
+                width: 90%;
+                box-shadow: 0 8px 32px rgba(0,0,0,.18);
+            }
+            .modal-msg {
+                font-size: 15px;
+                color: var(--text);
+                margin-bottom: 24px;
+                line-height: 1.5;
+            }
+            .modal-actions {
+                display: flex;
+                gap: 10px;
+                justify-content: flex-end;
+            }
+
             /* ═══ RESPONSIVE ═══ */
             @media (max-width: 900px) {
                 .metrics-grid {
@@ -1552,6 +1583,15 @@
 
         <!-- TOAST -->
         <div class="toast" id="toast"></div>
+        <div class="modal-overlay" id="confirm-overlay">
+            <div class="modal-box">
+                <div class="modal-msg" id="confirm-msg"></div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-outline btn-sm" id="confirm-cancel">Cancelar</button>
+                    <button type="button" class="btn btn-primary btn-sm danger" id="confirm-ok">Excluir</button>
+                </div>
+            </div>
+        </div>
 
         <script>
             /* ═══ STATE ═══ */
@@ -1578,9 +1618,29 @@
                 try {
                     ads = await apiCall('GET', '/ads/truck/');
                 } catch (err) {
-                    console.error('Erro ao carregar anúncios:', err);
                     toast('Servidor indisponível — verifique o backend');
                 }
+            }
+
+            /* ═══ CONFIRM MODAL ═══ */
+            function confirmModal(msg) {
+                return new Promise(resolve => {
+                    document.getElementById('confirm-msg').textContent = msg;
+                    const overlay = document.getElementById('confirm-overlay');
+                    overlay.classList.add('show');
+                    const ok     = document.getElementById('confirm-ok');
+                    const cancel = document.getElementById('confirm-cancel');
+                    function cleanup(result) {
+                        overlay.classList.remove('show');
+                        ok.removeEventListener('click', onOk);
+                        cancel.removeEventListener('click', onCancel);
+                        resolve(result);
+                    }
+                    function onOk()     { cleanup(true);  }
+                    function onCancel() { cleanup(false); }
+                    ok.addEventListener('click', onOk);
+                    cancel.addEventListener('click', onCancel);
+                });
             }
 
             /* ═══ TOAST ═══ */
@@ -1846,7 +1906,6 @@
                     clearInterval(iv);
                     document.getElementById("loading-box").style.display = "none";
                     toast("Erro ao criar anúncio: " + err.message);
-                    console.error(err);
                 }
                 document.getElementById("btn-gerar").disabled = false;
             }
@@ -1865,7 +1924,7 @@
                 }
             }
             async function excluir(campaignId) {
-                if (!confirm("Excluir este anúncio?")) return;
+                if (!await confirmModal("Excluir este anúncio?")) return;
                 try {
                     await apiCall('DELETE', `/ads/truck/${campaignId}`);
                     await loadAds();
