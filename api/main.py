@@ -17,10 +17,11 @@ _ROOT = Path(__file__).parent.parent
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Cria tabelas no Postgres/Neon na inicialização (idempotente via checkfirst).
-    # Em produção com Alembic, substituir por alembic upgrade head no deploy.
-    from db.database import Base, engine
-    Base.metadata.create_all(bind=engine)
+    from alembic import command
+    from alembic.config import Config
+    cfg = Config(str(_ROOT / "alembic.ini"))
+    cfg.set_main_option("script_location", str(_ROOT / "alembic"))
+    command.upgrade(cfg, "head")
     yield
 
 
