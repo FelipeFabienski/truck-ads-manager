@@ -17,11 +17,6 @@ _ROOT = Path(__file__).parent.parent
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    from alembic import command
-    from alembic.config import Config
-    cfg = Config(str(_ROOT / "alembic.ini"))
-    cfg.set_main_option("script_location", str(_ROOT / "alembic"))
-    command.upgrade(cfg, "head")
     yield
 
 
