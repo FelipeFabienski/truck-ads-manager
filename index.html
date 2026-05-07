@@ -1881,7 +1881,7 @@
             function escapeHtml(s) {
                 return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
             }
-            function adCardHTML(ad) {
+            function adCardHTML(ad, showWpp = true) {
                 const sc =
                     {
                         ativo: "badge-active",
@@ -1901,7 +1901,7 @@
                     .replace('[Modelo]', ad.modelo)
                     .replace('[Cor]', ad.cor)
                     .replace('[Ano]', ad.ano);
-                const wppBtn = wpp
+                const wppBtn = showWpp && wpp
                     ? `<a class="btn btn-wpp btn-sm" href="https://wa.me/${wpp.replace(/\D/g,'')}?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener noreferrer">Saiba mais</a>`
                     : '';
                 return `<div class="ad-card">
@@ -1944,7 +1944,7 @@
                               "Nenhum anúncio criado ainda",
                               'Clique em "Novo anúncio" para começar',
                           )
-                        : ads.slice(-5).reverse().map(adCardHTML).join("");
+                        : ads.slice(-5).reverse().map(ad => adCardHTML(ad, false)).join("");
             }
             function renderCampanhas() {
                 const q = (
