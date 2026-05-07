@@ -1967,7 +1967,7 @@
                               "Nenhuma campanha encontrada",
                               "Crie um anúncio ou ajuste os filtros",
                           )
-                        : filtered.map(adCardHTML).join("");
+                        : filtered.map(ad => adCardHTML(ad, false)).join("");
             }
             function renderMetricas() {
                 document.getElementById("mt-total").textContent = ads.length;
