@@ -175,8 +175,6 @@
                 height: 64px;
                 flex-shrink: 0;
             }
-            .topbar-left {
-            }
             .topbar-title {
                 font-size: 15px;
                 font-weight: 600;
@@ -243,12 +241,9 @@
                 background: var(--wpp-green);
                 color: #fff;
                 border: none;
-                text-decoration: none;
-                display: inline-flex;
-                align-items: center;
                 gap: 4px;
             }
-            .btn-wpp:hover { background: #1da851; color: #fff; }
+            .btn-wpp:hover { background: #1da851; }
             .btn-full {
                 width: 100%;
                 justify-content: center;
@@ -526,8 +521,6 @@
             }
 
             /* ═══ BUDGET ═══ */
-            .budget-section {
-            }
             .budget-presets {
                 display: flex;
                 gap: 6px;
@@ -867,7 +860,7 @@
                             Visão geral das campanhas
                         </div>
                     </div>
-                    <button class="btn btn-primary" onclick="nav('criar')">
+                    <button type="button" class="btn btn-primary" onclick="nav('criar')">
                         <svg viewBox="0 0 24 24">
                             <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
                         </svg>
@@ -921,26 +914,27 @@
                                 </div>
                                 <div class="form-row c3">
                                     <div class="form-group">
-                                        <label>Modelo *</label
+                                        <label for="f-modelo">Modelo *</label
                                         ><input
                                             id="f-modelo"
                                             placeholder="Ex: Volvo FH 540"
                                         />
                                     </div>
                                     <div class="form-group">
-                                        <label>Cor *</label
+                                        <label for="f-cor">Cor *</label
                                         ><input
                                             id="f-cor"
                                             placeholder="Ex: Branco"
                                         />
                                     </div>
                                     <div class="form-group">
-                                        <label>Ano *</label
+                                        <label for="f-ano">Ano *</label
                                         ><input
                                             id="f-ano"
                                             placeholder="Ex: 2023"
                                             maxlength="4"
-                                            oninput="this.value=this.value.replace(/\D/g,'').slice(0,4)"
+                                            inputmode="numeric"
+                                            pattern="[0-9]{4}"
                                         />
                                     </div>
                                 </div>
@@ -949,14 +943,14 @@
                                     style="margin-bottom: 0"
                                 >
                                     <div class="form-group">
-                                        <label>Preço (opcional)</label
+                                        <label for="f-preco">Preço (opcional)</label
                                         ><input
                                             id="f-preco"
                                             placeholder="Ex: R$ 380.000"
                                         />
                                     </div>
                                     <div class="form-group">
-                                        <label>Quilometragem (opcional)</label
+                                        <label for="f-km">Quilometragem (opcional)</label
                                         ><input
                                             id="f-km"
                                             placeholder="Ex: 120.000 km"
@@ -1023,36 +1017,42 @@
                                 <div class="budget-section">
                                     <div class="budget-presets">
                                         <button
+                                            type="button"
                                             class="budget-btn"
                                             onclick="setBudget(5, this)"
                                         >
                                             R$5
                                         </button>
                                         <button
+                                            type="button"
                                             class="budget-btn active"
                                             onclick="setBudget(10, this)"
                                         >
                                             R$10
                                         </button>
                                         <button
+                                            type="button"
                                             class="budget-btn"
                                             onclick="setBudget(15, this)"
                                         >
                                             R$15
                                         </button>
                                         <button
+                                            type="button"
                                             class="budget-btn"
                                             onclick="setBudget(20, this)"
                                         >
                                             R$20
                                         </button>
                                         <button
+                                            type="button"
                                             class="budget-btn"
                                             onclick="setBudget(30, this)"
                                         >
                                             R$30
                                         </button>
                                         <button
+                                            type="button"
                                             class="budget-btn"
                                             onclick="setBudget(50, this)"
                                         >
@@ -1067,7 +1067,7 @@
                                         "
                                     >
                                         <div class="form-group">
-                                            <label
+                                            <label for="f-budget"
                                                 >Valor personalizado
                                                 (USD/dia)</label
                                             >
@@ -1082,7 +1082,7 @@
                                             />
                                         </div>
                                         <div class="form-group">
-                                            <label>Duração da campanha</label>
+                                            <label for="f-duracao">Duração da campanha</label>
                                             <select
                                                 id="f-duracao"
                                                 onchange="updateBudgetPreview()"
@@ -1132,6 +1132,7 @@
                             </div>
 
                             <button
+                                type="button"
                                 class="btn btn-primary btn-full"
                                 id="btn-gerar"
                                 onclick="gerarAnuncio()"
@@ -1206,28 +1207,29 @@
                                 </div>
                                 <div class="form-row c2">
                                     <div class="form-group">
-                                        <label>Nome da loja / vendedor</label
+                                        <label for="m-nome">Nome da loja / vendedor</label
                                         ><input
                                             id="m-nome"
                                             placeholder="Ex: Império Caminhões"
                                         />
                                     </div>
                                     <div class="form-group">
-                                        <label>WhatsApp de contato *</label
+                                        <label for="m-wpp">WhatsApp de contato *</label
                                         ><input
                                             id="m-wpp"
+                                            type="tel"
                                             placeholder="Ex: 41999999999"
                                             maxlength="15"
-                                            oninput="this.value=this.value.replace(/\D/g,'').slice(0,15)"
+                                            inputmode="numeric"
                                         />
                                     </div>
                                 </div>
                                 <div class="form-group">
-                                    <label>Mensagem automática do WhatsApp</label>
+                                    <label for="m-wpp-msg">Mensagem automática do WhatsApp</label>
                                     <textarea
                                         id="m-wpp-msg"
                                         rows="3"
-                                        style="width:100%;resize:vertical;font-size:13px;padding:8px;border:1px solid var(--border);border-radius:6px;font-family:inherit;color:var(--text-primary);background:var(--surface)"
+                                        style="width:100%;resize:vertical;font-size:13px;padding:8px;border:1px solid var(--border);border-radius:6px;font-family:inherit;color:var(--text);background:var(--bg)"
                                     >Olá! Tenho interesse no [Modelo] [Cor] [Ano], pode me passar mais detalhes?</textarea>
                                     <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px">
                                         <span style="font-size:11px;color:var(--text-secondary)">[Modelo], [Cor] e [Ano] são substituídos automaticamente.</span>
@@ -1236,14 +1238,14 @@
                                 </div>
                                 <div class="form-row c2">
                                     <div class="form-group">
-                                        <label>Cidade / Região *</label
+                                        <label for="m-cidade">Cidade / Região *</label
                                         ><input
                                             id="m-cidade"
                                             placeholder="Ex: Curitiba"
                                         />
                                     </div>
                                     <div class="form-group">
-                                        <label>Estado</label>
+                                        <label for="m-estado">Estado</label>
                                         <select id="m-estado">
                                             <option value="">
                                                 Selecione...
@@ -1291,45 +1293,42 @@
                                 </div>
                                 <div class="form-row c2">
                                     <div class="form-group">
-                                        <label>Idade mínima</label
+                                        <label for="m-idade-min">Idade mínima</label
                                         ><input
                                             id="m-idade-min"
                                             type="number"
                                             value="25"
                                             min="18"
                                             max="65"
-                                            oninput="this.value=this.value.replace(/\D/g,'').slice(0,2)"
                                         />
                                     </div>
                                     <div class="form-group">
-                                        <label>Idade máxima</label
+                                        <label for="m-idade-max">Idade máxima</label
                                         ><input
                                             id="m-idade-max"
                                             type="number"
                                             value="55"
                                             min="18"
                                             max="65"
-                                            oninput="this.value=this.value.replace(/\D/g,'').slice(0,2)"
                                         />
                                     </div>
                                 </div>
                                 <div class="form-row c2">
                                     <div class="form-group">
-                                        <label>Raio de alcance (km)</label>
+                                        <label for="m-raio">Raio de alcance (km)</label>
                                         <select id="m-raio">
                                             <option value="50">50 km</option>
                                             <option value="100" selected>
                                                 100 km
                                             </option>
                                             <option value="200">200 km</option>
-                                            <option value="500">500 km</option>
-                                            <option value="0">
+                                            <option value="500">
                                                 Brasil inteiro
                                             </option>
                                         </select>
                                     </div>
                                     <div class="form-group">
-                                        <label>Gênero</label>
+                                        <label for="m-genero">Gênero</label>
                                         <select id="m-genero">
                                             <option value="todos" selected>
                                                 Todos
@@ -1344,7 +1343,7 @@
                                     </div>
                                 </div>
                                 <div class="form-group" style="margin-top: 4px">
-                                    <label>Interesses do público</label>
+                                    <label for="m-interesses">Interesses do público</label>
                                     <input
                                         id="m-interesses"
                                         value="Transporte rodoviário, Caminhões, Logística, Frete, Transportadora"
@@ -1363,7 +1362,7 @@
                                     Condições de pagamento
                                 </div>
                                 <div class="form-group">
-                                    <label
+                                    <label for="m-pagamento"
                                         >Formas de pagamento /
                                         financiamento</label
                                     >
@@ -1385,7 +1384,7 @@
                                     Posicionamentos padrão
                                 </div>
                                 <div class="form-group">
-                                    <label>Onde os anúncios aparecem</label>
+                                    <label for="m-posicionamentos">Onde os anúncios aparecem</label>
                                     <div
                                         style="
                                             display: flex;
@@ -1434,6 +1433,7 @@
                             </div>
 
                             <button
+                                type="button"
                                 class="btn btn-primary btn-full"
                                 onclick="salvarModelo()"
                                 style="padding: 12px 20px; font-size: 14px"
@@ -1646,12 +1646,15 @@
                     wrap.className = "preview-img-wrap";
                     const img = document.createElement("img");
                     img.className = "preview-img";
+                    img.alt = "";
                     img.src = URL.createObjectURL(file);
                     const btn = document.createElement("button");
+                    btn.type = "button";
                     btn.className = "preview-remove";
                     btn.textContent = "×";
                     btn.onclick = (e) => {
                         e.stopPropagation();
+                        URL.revokeObjectURL(img.src);
                         selectedImages.splice(i, 1);
                         handleImagesRefresh();
                     };
@@ -1781,7 +1784,7 @@
                 }
                 if (!modeloData.wpp || !modeloData.cidade || !modeloData.estado) {
                     toast("Configure os dados padrão antes de criar um anúncio!");
-                    nav("modelo");
+                    await nav("modelo");
                     return;
                 }
 
@@ -1838,7 +1841,7 @@
                     document.getElementById("preview-imgs").innerHTML = "";
                     selectedImages = [];
                     updateBudgetPreview();
-                    nav("campanhas");
+                    await nav("campanhas");
                 } catch (err) {
                     clearInterval(iv);
                     document.getElementById("loading-box").style.display = "none";
@@ -1875,6 +1878,9 @@
             }
 
             /* ═══ RENDER AD CARD ═══ */
+            function escapeHtml(s) {
+                return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+            }
             function adCardHTML(ad) {
                 const sc =
                     {
@@ -1896,23 +1902,23 @@
                     .replace('[Cor]', ad.cor)
                     .replace('[Ano]', ad.ano);
                 const wppBtn = wpp
-                    ? `<a class="btn btn-wpp btn-sm" href="https://wa.me/${wpp.replace(/\D/g,'')}?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">Saiba mais</a>`
+                    ? `<a class="btn btn-wpp btn-sm" href="https://wa.me/${wpp.replace(/\D/g,'')}?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener noreferrer">Saiba mais</a>`
                     : '';
                 return `<div class="ad-card">
     <div class="ad-thumb">🚛</div>
     <div class="ad-info">
-      <div class="ad-name">${ad.modelo} ${ad.cor} ${ad.ano}</div>
-      <div class="ad-meta">${ad.cidade} · ${ad.preco || '—'} · ${ad.km || "—"}</div>
+      <div class="ad-name">${escapeHtml(ad.modelo)} ${escapeHtml(ad.cor)} ${escapeHtml(ad.ano)}</div>
+      <div class="ad-meta">${escapeHtml(ad.cidade)} · ${escapeHtml(ad.preco || '—')} · ${escapeHtml(ad.km || "—")}</div>
       <span class="badge ${sc}">${sl}</span>
     </div>
     <div class="ad-stats">
       <div class="ad-stat"><div class="ad-stat-val">${ad.leads}</div><div class="ad-stat-lbl">Leads</div></div>
-      <div class="ad-stat"><div class="ad-stat-val">R$${ad.spend}</div><div class="ad-stat-lbl">Investido</div></div>
+      <div class="ad-stat"><div class="ad-stat-val">R$${(ad.spend || 0).toFixed(2).replace('.', ',')}</div><div class="ad-stat-lbl">Investido</div></div>
     </div>
     <div class="ad-actions">
       ${wppBtn}
-      <button class="btn btn-outline btn-sm" onclick="toggleStatus('${ad.campaign_id}', '${ad.status}')">${tl}</button>
-      <button class="btn btn-outline btn-sm danger" onclick="excluir('${ad.campaign_id}')">Excluir</button>
+      <button type="button" class="btn btn-outline btn-sm" onclick="toggleStatus('${escapeHtml(ad.campaign_id)}', '${escapeHtml(ad.status)}')">${tl}</button>
+      <button type="button" class="btn btn-outline btn-sm danger" onclick="excluir('${escapeHtml(ad.campaign_id)}')">Excluir</button>
     </div>
   </div>`;
             }
@@ -1982,10 +1988,10 @@
                               .map(
                                   (ad) => `<div class="ad-card">
       <div class="ad-thumb">🚛</div>
-      <div class="ad-info"><div class="ad-name">${ad.modelo} ${ad.cor} ${ad.ano}</div><div class="ad-meta">${ad.cidade} · ${ad.created || "—"}</div></div>
+      <div class="ad-info"><div class="ad-name">${escapeHtml(ad.modelo)} ${escapeHtml(ad.cor)} ${escapeHtml(ad.ano)}</div><div class="ad-meta">${escapeHtml(ad.cidade)} · ${escapeHtml(ad.created || "—")}</div></div>
       <div class="ad-stats">
         <div class="ad-stat"><div class="ad-stat-val">${ad.leads}</div><div class="ad-stat-lbl">Leads</div></div>
-        <div class="ad-stat"><div class="ad-stat-val">R$${ad.spend}</div><div class="ad-stat-lbl">Investido</div></div>
+        <div class="ad-stat"><div class="ad-stat-val">R$${(ad.spend || 0).toFixed(2).replace('.', ',')}</div><div class="ad-stat-lbl">Investido</div></div>
         <div class="ad-stat"><div class="ad-stat-val">${ad.leads > 0 ? "R$" + Math.round(ad.spend / ad.leads) : "—"}</div><div class="ad-stat-lbl">CPL</div></div>
       </div>
     </div>`,
