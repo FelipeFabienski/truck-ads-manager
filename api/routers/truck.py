@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, File, Query, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 
+from ads.exceptions import AdsError
 from ads.truck.adapter import translate_status_to_en
 from ads.truck.schemas import TruckAdCreateRequest, TruckAdPublishResponse
 from ads.truck.service import TruckAdService
@@ -31,7 +32,10 @@ def upload_image(
     service: TruckAdService = Depends(get_truck_service),
 ) -> dict:
     image_bytes = file.file.read()
-    image_hash = service.upload_image(image_bytes, file.filename or "image.jpg")
+    try:
+        image_hash = service.upload_image(image_bytes, file.filename or "image.jpg")
+    except AdsError as exc:
+        raise HTTPException(status_code=400, detail=exc.to_dict()) from exc
     return {"image_hash": image_hash}
 
 
