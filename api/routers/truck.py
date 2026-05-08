@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, File, Query, UploadFile
 
 from ads.truck.adapter import translate_status_to_en
 from ads.truck.schemas import TruckAdCreateRequest, TruckAdPublishResponse
@@ -15,6 +15,24 @@ from ..schemas import (
 )
 
 router = APIRouter()
+
+
+@router.post(
+    "/upload",
+    summary="Upload imagem do anúncio",
+    tags=["Truck Ads"],
+    responses={
+        200: {"description": "image_hash retornado pela Meta API"},
+        400: {"description": "Provider não suporta upload"},
+    },
+)
+def upload_image(
+    file: UploadFile = File(..., description="Imagem JPEG ou PNG do caminhão"),
+    service: TruckAdService = Depends(get_truck_service),
+) -> dict:
+    image_bytes = file.file.read()
+    image_hash = service.upload_image(image_bytes, file.filename or "image.jpg")
+    return {"image_hash": image_hash}
 
 
 @router.post(

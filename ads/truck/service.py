@@ -74,6 +74,7 @@ class _ProviderAdapter:
                 "headline": ai.headline,
                 "creative": {"type": "image", "url": "", "caption": ai.roteiro},
                 "destination": f"https://wa.me/{req.vendedor_wpp}",
+                "image_hash": req.image_hash,
             },
         }
 
@@ -217,6 +218,7 @@ class TruckAdService:
             "cidade": f"{request.cidade}, {request.estado}",
             "status": "rascunho",
             "budget": request.budget,
+            "image_hash": request.image_hash,
             "targeting_data": {
                 "vendedor_nome": request.vendedor_nome,
                 "vendedor_wpp": request.vendedor_wpp,
@@ -393,6 +395,12 @@ class TruckAdService:
             "created": dt.strftime("%d/%m/%Y"),
             "wpp": td.get("vendedor_wpp", ""),
         }
+
+    def upload_image(self, image_bytes: bytes, filename: str = "image.jpg") -> str:
+        if not hasattr(self._provider, "upload_image"):
+            from ..exceptions import AdsError
+            raise AdsError("Provider does not support image upload", "UNSUPPORTED")
+        return self._provider.upload_image(image_bytes, filename)  # type: ignore[attr-defined]
 
     # ── Backward-compatible alias (used by unit tests) ────────────────────────
 

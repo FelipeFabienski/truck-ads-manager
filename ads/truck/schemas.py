@@ -33,6 +33,9 @@ class TruckAdCreateRequest(BaseModel):
     publico_interesses: str = Field(default="", description="CSV de interesses")
     publico_posicionamentos: list[str] = Field(default_factory=list)
 
+    # Imagem (hash retornado por POST /ads/truck/upload)
+    image_hash: str | None = None
+
     @field_validator("estado")
     @classmethod
     def estado_upper(cls, v: str) -> str:

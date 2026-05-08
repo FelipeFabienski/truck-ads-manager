@@ -37,6 +37,7 @@ class CampaignModel(Base):
     leads: Mapped[int | None] = mapped_column(default=0)
     spend: Mapped[float | None] = mapped_column(default=0.0)
 
+    image_hash: Mapped[str | None] = mapped_column(default=None)
     targeting_data: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
 
     # default Python-side garante que created_at está sempre disponível após
