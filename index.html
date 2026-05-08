@@ -587,6 +587,43 @@
                 cursor: pointer;
                 transition: all 0.2s;
             }
+            .upload-area.uploading {
+                opacity: 0.6;
+                cursor: wait;
+                pointer-events: none;
+            }
+            .upload-area.upload-ok {
+                border-color: var(--green);
+                background: var(--green-bg);
+            }
+            .upload-area.upload-err {
+                border-color: var(--red);
+                background: var(--red-bg);
+            }
+            .upload-badge {
+                position: absolute;
+                bottom: 2px;
+                right: 2px;
+                width: 16px;
+                height: 16px;
+                border-radius: 50%;
+                font-size: 9px;
+                font-weight: 700;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                line-height: 1;
+            }
+            .upload-badge.ok { background: var(--green); color: #fff; }
+            .upload-badge.err { background: var(--red); color: #fff; }
+            .upload-status {
+                font-size: 11px;
+                margin-top: 6px;
+                text-align: center;
+                min-height: 16px;
+            }
+            .upload-status.ok { color: var(--green); }
+            .upload-status.err { color: var(--red); }
             .upload-area:hover {
                 background: var(--bg-secondary);
                 border-color: var(--accent);
@@ -1019,14 +1056,13 @@
                                         Clique para selecionar imagens
                                     </div>
                                     <div class="upload-sub">
-                                        JPG, PNG · Máx. 5 imagens
+                                        JPG, PNG, GIF, WebP — Máx. 30 MB (opcional)
                                     </div>
                                 </div>
                                 <input
                                     type="file"
                                     id="img-input"
-                                    accept="image/*"
-                                    multiple
+                                    accept=".jpg,.jpeg,.png,.gif,.webp,image/jpeg,image/png,image/gif,image/webp"
                                     style="display: none"
                                     onchange="handleImages(this)"
                                 />
@@ -1034,6 +1070,7 @@
                                     class="preview-imgs"
                                     id="preview-imgs"
                                 ></div>
+                                <div class="upload-status" id="upload-status"></div>
                             </div>
 
                             <div class="form-card">
@@ -1597,6 +1634,25 @@
             /* ═══ STATE ═══ */
             let ads = [];
             let selectedImages = [];
+            let uploadedImageHash = null;
+
+            const ALLOWED_IMAGE_TYPES = new Set([
+                'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+            ]);
+            const ALLOWED_EXTENSIONS = new Set([
+                'jpg', 'jpeg', 'png', 'gif', 'webp',
+            ]);
+            const MAX_IMAGE_BYTES = 30 * 1024 * 1024;
+
+            function _imageExtension(filename) {
+                return (filename.split('.').pop() || '').toLowerCase();
+            }
+
+            function _isAllowedImage(file) {
+                if (ALLOWED_TYPES && file.type && !ALLOWED_IMAGE_TYPES.has(file.type)) return false;
+                const ext = _imageExtension(file.name);
+                return ext === '' || ALLOWED_EXTENSIONS.has(ext);
+            }
             const DEFAULT_WPP_MSG = 'Olá! Tenho interesse no [Modelo] [Cor] [Ano], pode me passar mais detalhes?';
             function resetWppMsg() {
                 document.getElementById('m-wpp-msg').value = DEFAULT_WPP_MSG;
@@ -1694,10 +1750,65 @@
             }
 
             /* ═══ IMAGES ═══ */
-            function handleImages(input) {
-                selectedImages = Array.from(input.files).slice(0, 5);
+            async function handleImages(input) {
+                const file = input.files[0];
+                input.value = '';
+                if (!file) return;
+
+                if (!_isAllowedImage(file)) {
+                    toast('Formato não suportado. Use JPG, PNG, GIF ou WebP.');
+                    return;
+                }
+                if (file.size > MAX_IMAGE_BYTES) {
+                    toast('Imagem muito grande. O limite é 30 MB.');
+                    return;
+                }
+
+                // Revogar URL anterior
+                selectedImages.forEach(f => URL.revokeObjectURL(f._objUrl));
+                selectedImages = [file];
+                uploadedImageHash = null;
+                _setUploadState('idle');
                 handleImagesRefresh();
+
+                // Upload automático para a API
+                _setUploadState('uploading');
+                try {
+                    const form = new FormData();
+                    form.append('file', file, file.name);
+                    const res = await fetch('/ads/truck/upload', { method: 'POST', body: form });
+                    const json = await res.json();
+                    if (res.ok && json.image_hash) {
+                        uploadedImageHash = json.image_hash;
+                        _setUploadState('ok', 'Imagem enviada ✓');
+                        handleImagesRefresh();
+                    } else {
+                        // Provider mock: aceita imagem mas sem hash real
+                        _setUploadState('warn', 'Preview salvo (sem hash — modo mock)');
+                    }
+                } catch {
+                    _setUploadState('warn', 'Sem conexão com upload — imagem mantida localmente');
+                }
             }
+
+            function _setUploadState(state, msg) {
+                const area = document.querySelector('.upload-area');
+                const status = document.getElementById('upload-status');
+                area.classList.remove('uploading', 'upload-ok', 'upload-err');
+                status.className = 'upload-status';
+                status.textContent = msg || '';
+                if (state === 'uploading') {
+                    area.classList.add('uploading');
+                    status.textContent = 'Enviando…';
+                } else if (state === 'ok') {
+                    area.classList.add('upload-ok');
+                    status.classList.add('ok');
+                } else if (state === 'err') {
+                    area.classList.add('upload-err');
+                    status.classList.add('err');
+                }
+            }
+
             function handleImagesRefresh() {
                 const c = document.getElementById("preview-imgs");
                 c.innerHTML = "";
@@ -1707,15 +1818,25 @@
                     const img = document.createElement("img");
                     img.className = "preview-img";
                     img.alt = "";
-                    img.src = URL.createObjectURL(file);
+                    const objUrl = URL.createObjectURL(file);
+                    file._objUrl = objUrl;
+                    img.src = objUrl;
+                    if (uploadedImageHash) {
+                        const badge = document.createElement("span");
+                        badge.className = "upload-badge ok";
+                        badge.textContent = "✓";
+                        wrap.appendChild(badge);
+                    }
                     const btn = document.createElement("button");
                     btn.type = "button";
                     btn.className = "preview-remove";
                     btn.textContent = "×";
                     btn.onclick = (e) => {
                         e.stopPropagation();
-                        URL.revokeObjectURL(img.src);
+                        URL.revokeObjectURL(objUrl);
                         selectedImages.splice(i, 1);
+                        uploadedImageHash = null;
+                        _setUploadState('idle');
                         handleImagesRefresh();
                     };
                     wrap.appendChild(img);
@@ -1885,6 +2006,7 @@
                     publico_genero: GENERO_MAP[modeloData.genero] || 'all',
                     publico_interesses: modeloData.interesses || '',
                     publico_posicionamentos: modeloData.posicionamentos || [],
+                    image_hash: uploadedImageHash || null,
                 };
 
                 try {
@@ -1899,7 +2021,10 @@
                     document.getElementById("f-km").value = "";
                     document.getElementById("f-budget").value = "10";
                     document.getElementById("preview-imgs").innerHTML = "";
+                    document.getElementById("upload-status").textContent = "";
+                    document.querySelector('.upload-area').classList.remove('upload-ok', 'upload-err');
                     selectedImages = [];
+                    uploadedImageHash = null;
                     updateBudgetPreview();
                     await nav("campanhas");
                 } catch (err) {
