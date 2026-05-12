@@ -14,6 +14,20 @@ from ads.providers.mock_provider import MockAdsProvider
 from ads.truck.service import TruckAdService
 from api.dependencies import get_truck_service
 from api.main import create_app
+from auth.dependencies import get_current_user
+from db.models.user import User
+
+
+# ── Mock user for auth bypass ──────────────────────────────────────────────────
+
+def _mock_user() -> User:
+    u = User.__new__(User)
+    u.id = 1
+    u.name = "Teste"
+    u.email = "teste@example.com"
+    u.facebook_user_id = "123456"
+    u.active_ad_account_id = None
+    return u
 
 
 # ── Fixtures ───────────────────────────────────────────────────────────────────
@@ -27,6 +41,7 @@ def service() -> TruckAdService:
 def client(service: TruckAdService) -> TestClient:
     app = create_app()
     app.dependency_overrides[get_truck_service] = lambda: service
+    app.dependency_overrides[get_current_user] = _mock_user
     return TestClient(app, raise_server_exceptions=False)
 
 
@@ -37,6 +52,7 @@ def demo_client() -> TestClient:
     demo_service = TruckAdService(provider=provider)
     app = create_app()
     app.dependency_overrides[get_truck_service] = lambda: demo_service
+    app.dependency_overrides[get_current_user] = _mock_user
     return TestClient(app, raise_server_exceptions=False)
 
 
