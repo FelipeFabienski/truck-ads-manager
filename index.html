@@ -580,60 +580,6 @@
 
             /* ═══ UPLOAD ═══ */
             /* ═══ AUTH ═══ */
-            .login-overlay {
-                position: fixed;
-                inset: 0;
-                background: var(--bg);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                z-index: 2000;
-                flex-direction: column;
-                gap: 24px;
-            }
-            .login-overlay.hidden { display: none; }
-            .login-card {
-                background: var(--bg);
-                border: 1px solid var(--border);
-                border-radius: var(--radius-lg);
-                padding: 40px 48px;
-                text-align: center;
-                max-width: 380px;
-                width: 90%;
-                box-shadow: 0 8px 40px rgba(0,0,0,.08);
-            }
-            .login-logo {
-                width: 48px;
-                height: 48px;
-                background: var(--accent);
-                border-radius: var(--radius);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                margin: 0 auto 16px;
-            }
-            .login-logo svg { width: 28px; height: 28px; fill: #fff; }
-            .login-title { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
-            .login-sub { font-size: 13px; color: var(--text-secondary); margin-bottom: 28px; line-height: 1.5; }
-            .btn-facebook {
-                display: inline-flex;
-                align-items: center;
-                gap: 10px;
-                padding: 12px 24px;
-                background: #1877f2;
-                color: #fff;
-                border: none;
-                border-radius: var(--radius);
-                font-size: 14px;
-                font-weight: 600;
-                cursor: pointer;
-                font-family: var(--font);
-                transition: opacity .2s;
-                width: 100%;
-                justify-content: center;
-            }
-            .btn-facebook:hover { opacity: .88; }
-            .btn-facebook svg { width: 20px; height: 20px; fill: #fff; flex-shrink: 0; }
             .user-info {
                 display: flex;
                 align-items: center;
@@ -661,19 +607,6 @@
                 text-overflow: ellipsis;
                 white-space: nowrap;
             }
-            .account-select {
-                font-family: var(--font);
-                font-size: 12px;
-                font-weight: 500;
-                color: var(--text-secondary);
-                background: var(--bg-secondary);
-                border: 1px solid var(--border);
-                border-radius: var(--radius-sm);
-                padding: 4px 8px;
-                cursor: pointer;
-                max-width: 160px;
-            }
-            .account-select:focus { outline: none; border-color: var(--accent); }
 
             .upload-area {
                 border: 1.5px dashed var(--border-hover);
@@ -950,21 +883,6 @@
         </style>
     </head>
     <body>
-        <!-- ═══ LOGIN OVERLAY ═══ -->
-        <div class="login-overlay hidden" id="login-overlay">
-            <div class="login-card">
-                <div class="login-logo">
-                    <svg viewBox="0 0 24 24"><path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4z"/></svg>
-                </div>
-                <div class="login-title">Império Caminhões</div>
-                <div class="login-sub">Conecte sua conta Meta para gerenciar anúncios de caminhões no Facebook, Instagram e WhatsApp.</div>
-                <button class="btn-facebook" onclick="loginFacebook()">
-                    <svg viewBox="0 0 24 24"><path d="M22 12c0-5.52-4.48-10-10-10S2 6.48 2 12c0 4.84 3.44 8.87 8 9.8V15H8v-3h2V9.5C10 7.57 11.57 6 13.5 6H16v3h-2c-.55 0-1 .45-1 1v2h3v3h-3v6.95c5.05-.5 9-4.76 9-9.95z"/></svg>
-                    Entrar com Facebook
-                </button>
-            </div>
-        </div>
-
         <div class="app">
             <!-- ═══════════ SIDEBAR ═══════════ -->
             <aside class="sidebar">
@@ -1040,7 +958,6 @@
                         </div>
                     </div>
                     <div style="display:flex;align-items:center;gap:12px;">
-                        <select class="account-select" id="account-select" onchange="selectAccount(this.value)" title="Conta de anúncios ativa" style="display:none"></select>
                         <div class="user-info" id="user-info" style="display:none">
                             <div class="user-avatar" id="user-avatar">?</div>
                             <span class="user-name" id="user-name">Carregando…</span>
@@ -1764,61 +1681,24 @@
                 localStorage.removeItem('jwt');
             }
 
-            function showLoginScreen() {
-                document.getElementById('login-overlay').classList.remove('hidden');
-            }
-
-            function hideLoginScreen() {
-                document.getElementById('login-overlay').classList.add('hidden');
-            }
-
-            function loginFacebook() {
-                window.location.href = '/auth/facebook/login';
-            }
-
             async function logout() {
                 _clearJwt();
                 _currentUser = null;
                 document.getElementById('user-info').style.display = 'none';
-                document.getElementById('account-select').style.display = 'none';
-                showLoginScreen();
-            }
-
-            async function selectAccount(adAccountId) {
-                if (!adAccountId) return;
-                try {
-                    await apiCall('PATCH', `/auth/me/account?ad_account_id=${encodeURIComponent(adAccountId)}`);
-                    toast('Conta de anúncios alterada.');
-                } catch (err) {
-                    toast('Erro ao trocar conta: ' + err.message);
-                }
             }
 
             async function loadCurrentUser() {
                 const token = _getJwt();
-                if (!token) { showLoginScreen(); return false; }
+                if (!token) return;
                 try {
                     const user = await apiCall('GET', '/auth/me');
                     _currentUser = user;
-                    // Atualizar topbar
                     const initials = (user.name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
                     document.getElementById('user-avatar').textContent = initials;
                     document.getElementById('user-name').textContent = user.name || 'Usuário';
                     document.getElementById('user-info').style.display = 'flex';
-                    // Preencher seletor de contas
-                    const sel = document.getElementById('account-select');
-                    if (user.ad_accounts && user.ad_accounts.length > 0) {
-                        sel.innerHTML = user.ad_accounts.map(a =>
-                            `<option value="${a.id}" ${a.id === user.active_ad_account_id ? 'selected' : ''}>${a.name || a.id}</option>`
-                        ).join('');
-                        sel.style.display = 'block';
-                    }
-                    hideLoginScreen();
-                    return true;
                 } catch {
                     _clearJwt();
-                    showLoginScreen();
-                    return false;
                 }
             }
 
@@ -1859,7 +1739,6 @@
                 const res = await fetch(path, opts);
                 if (res.status === 401) {
                     _clearJwt();
-                    showLoginScreen();
                     throw new Error('Sessão expirada. Faça login novamente.');
                 }
                 if (!res.ok) {
@@ -2384,17 +2263,7 @@
 
             /* ═══ INIT ═══ */
             (async () => {
-                // Capturar token do callback OAuth (?token=...)
-                const params = new URLSearchParams(window.location.search);
-                const urlToken = params.get('token');
-                if (urlToken) {
-                    _saveJwt(urlToken);
-                    window.history.replaceState({}, '', '/');
-                }
-
-                const authed = await loadCurrentUser();
-                if (!authed) return;
-
+                await loadCurrentUser();
                 await loadAds();
                 renderDashboard();
             })();

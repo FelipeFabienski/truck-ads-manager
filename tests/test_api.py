@@ -25,7 +25,6 @@ def _mock_user() -> User:
     u.id = 1
     u.name = "Teste"
     u.email = "teste@example.com"
-    u.facebook_user_id = "123456"
     u.active_ad_account_id = None
     return u
 

@@ -12,10 +12,9 @@ class User(Base):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    facebook_user_id: Mapped[str] = mapped_column(unique=True, index=True)
     name: Mapped[str] = mapped_column()
     email: Mapped[str | None] = mapped_column(nullable=True)
-    access_token_enc: Mapped[str] = mapped_column()
+    access_token_enc: Mapped[str | None] = mapped_column(nullable=True)
     token_expires_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
