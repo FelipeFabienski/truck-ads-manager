@@ -66,6 +66,10 @@ def create_app(title: str = "Truck Ads Manager API") -> FastAPI:
     def health() -> dict:
         return {"status": "ok", "provider": os.getenv("ADS_PROVIDER", "mock")}
 
+    @app.get("/version", include_in_schema=False)
+    def version() -> dict:
+        return {"etapa": 2, "commit": "7aa30be"}
+
     # ── Frontend ──────────────────────────────────────────────────────────────
     @app.get("/", include_in_schema=False)
     def frontend() -> FileResponse:
