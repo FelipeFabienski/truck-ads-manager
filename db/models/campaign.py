@@ -3,8 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import DateTime, ForeignKey
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import JSON, DateTime, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column
 
 from db.database import Base
@@ -33,7 +32,7 @@ class CampaignModel(Base):
     leads: Mapped[int | None] = mapped_column(default=0)
     spend: Mapped[float | None] = mapped_column(default=0.0)
 
-    targeting_data: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    targeting_data: Mapped[dict[str, Any] | None] = mapped_column(JSON)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
