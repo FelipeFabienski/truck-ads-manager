@@ -19,6 +19,20 @@ _ROOT = Path(__file__).parent.parent
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Ensure email-verification columns exist (idempotent, no alembic dependency)
+    from sqlalchemy import text
+    from db.database import engine
+    with engine.connect() as conn:
+        conn.execute(text(
+            "ALTER TABLE users "
+            "ADD COLUMN IF NOT EXISTS email_verification_token VARCHAR, "
+            "ADD COLUMN IF NOT EXISTS email_verification_expires_at TIMESTAMPTZ"
+        ))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_users_email_verification_token "
+            "ON users (email_verification_token)"
+        ))
+        conn.commit()
     yield
 
 
