@@ -11,6 +11,12 @@ class RegisterRequest(BaseModel):
     password: str = Field(..., min_length=8)
 
 
+class RegisterResponse(BaseModel):
+    message: str = "Verifique seu email para ativar a conta"
+    email: str
+    email_sent: bool
+
+
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str = Field(..., min_length=1)

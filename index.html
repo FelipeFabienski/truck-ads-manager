@@ -580,6 +580,85 @@
 
             /* ═══ UPLOAD ═══ */
             /* ═══ AUTH ═══ */
+            .auth-overlay {
+                display: none;
+                position: fixed;
+                inset: 0;
+                background: rgba(0,0,0,.5);
+                z-index: 1100;
+                align-items: center;
+                justify-content: center;
+            }
+            .auth-overlay.show { display: flex; }
+            .auth-box {
+                background: var(--bg);
+                border-radius: var(--radius-lg);
+                padding: 36px 40px;
+                width: 100%;
+                max-width: 420px;
+                box-shadow: 0 12px 40px rgba(0,0,0,.2);
+            }
+            .auth-title {
+                font-size: 20px;
+                font-weight: 700;
+                margin-bottom: 6px;
+                color: var(--text);
+            }
+            .auth-sub {
+                font-size: 13px;
+                color: var(--text-secondary);
+                margin-bottom: 24px;
+                line-height: 1.5;
+            }
+            .auth-field { margin-bottom: 14px; }
+            .auth-field label {
+                display: block;
+                font-size: 12px;
+                font-weight: 600;
+                color: var(--text-secondary);
+                margin-bottom: 5px;
+                text-transform: uppercase;
+                letter-spacing: 0.04em;
+            }
+            .auth-field input {
+                width: 100%;
+                padding: 10px 12px;
+                border: 1px solid var(--border-hover);
+                border-radius: var(--radius-sm);
+                font-family: var(--font);
+                font-size: 14px;
+                color: var(--text);
+                background: var(--bg);
+                outline: none;
+                transition: border-color 0.2s;
+            }
+            .auth-field input:focus { border-color: var(--accent); }
+            .auth-submit { width: 100%; margin-top: 8px; padding: 11px; font-size: 14px; font-weight: 600; }
+            .auth-switch {
+                text-align: center;
+                margin-top: 18px;
+                font-size: 13px;
+                color: var(--text-secondary);
+            }
+            .auth-switch a {
+                color: var(--accent);
+                cursor: pointer;
+                font-weight: 600;
+            }
+            .auth-switch a:hover { text-decoration: underline; }
+            .auth-error {
+                background: var(--red-bg);
+                color: var(--red);
+                border-radius: var(--radius-sm);
+                padding: 10px 14px;
+                font-size: 13px;
+                margin-bottom: 14px;
+                display: none;
+            }
+            .auth-error.show { display: block; }
+            .auth-verify-msg { text-align: center; padding: 8px 0 16px; }
+            .auth-verify-icon { font-size: 44px; margin-bottom: 12px; }
+            .auth-verify-msg p { font-size: 13px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 6px; }
             .user-info {
                 display: flex;
                 align-items: center;
@@ -819,6 +898,8 @@
                 transform: translateY(0);
                 opacity: 1;
             }
+            .toast.success { background: var(--green); }
+            .toast.error   { background: var(--red); }
 
             /* ═══ CONFIRM MODAL ═══ */
             .modal-overlay {
@@ -963,6 +1044,7 @@
                             <span class="user-name" id="user-name">Carregando…</span>
                             <button type="button" class="btn btn-outline btn-sm" onclick="logout()" style="padding:4px 10px;font-size:11px;">Sair</button>
                         </div>
+                        <button type="button" class="btn btn-outline btn-sm" id="auth-login-btn" onclick="showAuthModal('login')" style="display:none">Entrar</button>
                         <button type="button" class="btn btn-primary" onclick="nav('criar')">
                             <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
                             Novo anúncio
@@ -1664,6 +1746,63 @@
             </div>
         </div>
 
+        <!-- AUTH MODAL -->
+        <div class="auth-overlay" id="auth-overlay">
+            <div class="auth-box">
+                <!-- Login -->
+                <div id="auth-login">
+                    <div class="auth-title">Entrar</div>
+                    <div class="auth-sub">Acesse sua conta para gerenciar campanhas.</div>
+                    <div class="auth-error" id="auth-login-err"></div>
+                    <div class="auth-field">
+                        <label>Email</label>
+                        <input type="email" id="auth-email" placeholder="seu@email.com" autocomplete="email"
+                               onkeydown="if(event.key==='Enter')submitLogin()" />
+                    </div>
+                    <div class="auth-field">
+                        <label>Senha</label>
+                        <input type="password" id="auth-password" placeholder="••••••••" autocomplete="current-password"
+                               onkeydown="if(event.key==='Enter')submitLogin()" />
+                    </div>
+                    <button type="button" class="btn btn-primary auth-submit" onclick="submitLogin()">Entrar</button>
+                    <div class="auth-switch">Não tem conta? <a onclick="showAuthPanel('register')">Cadastre-se</a></div>
+                </div>
+                <!-- Register -->
+                <div id="auth-register" style="display:none">
+                    <div class="auth-title">Criar conta</div>
+                    <div class="auth-sub">Crie sua conta para começar.</div>
+                    <div class="auth-error" id="auth-register-err"></div>
+                    <div class="auth-field">
+                        <label>Nome</label>
+                        <input type="text" id="auth-name" placeholder="Seu nome" autocomplete="name"
+                               onkeydown="if(event.key==='Enter')submitRegister()" />
+                    </div>
+                    <div class="auth-field">
+                        <label>Email</label>
+                        <input type="email" id="auth-reg-email" placeholder="seu@email.com" autocomplete="email"
+                               onkeydown="if(event.key==='Enter')submitRegister()" />
+                    </div>
+                    <div class="auth-field">
+                        <label>Senha</label>
+                        <input type="password" id="auth-reg-password" placeholder="Mínimo 8 caracteres" autocomplete="new-password"
+                               onkeydown="if(event.key==='Enter')submitRegister()" />
+                    </div>
+                    <button type="button" class="btn btn-primary auth-submit" onclick="submitRegister()">Criar conta</button>
+                    <div class="auth-switch">Já tem conta? <a onclick="showAuthPanel('login')">Entrar</a></div>
+                </div>
+                <!-- Email sent -->
+                <div id="auth-verify" style="display:none">
+                    <div class="auth-verify-msg">
+                        <div class="auth-verify-icon">📧</div>
+                        <div class="auth-title" style="text-align:center;margin-bottom:12px">Verifique seu email</div>
+                        <p>Enviamos um link de confirmação para <strong id="auth-verify-email"></strong>.</p>
+                        <p>Clique no link para ativar sua conta e, em seguida, faça login.</p>
+                    </div>
+                    <button type="button" class="btn btn-outline auth-submit" onclick="hideAuthModal()">Fechar</button>
+                </div>
+            </div>
+        </div>
+
         <script>
             /* ═══ AUTH STATE ═══ */
             let _jwt = null;
@@ -1685,6 +1824,7 @@
                 _clearJwt();
                 _currentUser = null;
                 document.getElementById('user-info').style.display = 'none';
+                document.getElementById('auth-login-btn').style.display = '';
             }
 
             async function loadCurrentUser() {
@@ -1697,10 +1837,93 @@
                     document.getElementById('user-avatar').textContent = initials;
                     document.getElementById('user-name').textContent = user.name || 'Usuário';
                     document.getElementById('user-info').style.display = 'flex';
+                    document.getElementById('auth-login-btn').style.display = 'none';
                 } catch {
                     _clearJwt();
                 }
             }
+
+            /* ═══ AUTH MODAL ═══ */
+            function showAuthModal(panel) {
+                showAuthPanel(panel || 'login');
+                document.getElementById('auth-overlay').classList.add('show');
+            }
+
+            function hideAuthModal() {
+                document.getElementById('auth-overlay').classList.remove('show');
+            }
+
+            function showAuthPanel(panel) {
+                document.getElementById('auth-login').style.display    = panel === 'login'    ? '' : 'none';
+                document.getElementById('auth-register').style.display = panel === 'register' ? '' : 'none';
+                document.getElementById('auth-verify').style.display   = panel === 'verify'   ? '' : 'none';
+                _setAuthError('auth-login-err', '');
+                _setAuthError('auth-register-err', '');
+            }
+
+            function _setAuthError(id, msg) {
+                const el = document.getElementById(id);
+                el.textContent = msg;
+                el.classList.toggle('show', !!msg);
+            }
+
+            async function submitLogin() {
+                const email    = document.getElementById('auth-email').value.trim();
+                const password = document.getElementById('auth-password').value;
+                _setAuthError('auth-login-err', '');
+                try {
+                    const res = await fetch('/auth/login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email, password }),
+                    });
+                    const data = await res.json().catch(() => ({}));
+                    if (res.status === 403) {
+                        _setAuthError('auth-login-err', data.detail || 'Confirme seu email antes de fazer login.');
+                        return;
+                    }
+                    if (!res.ok) {
+                        _setAuthError('auth-login-err', data.detail || 'Email ou senha inválidos.');
+                        return;
+                    }
+                    _saveJwt(data.access_token);
+                    hideAuthModal();
+                    await loadCurrentUser();
+                    await loadAds();
+                    renderDashboard();
+                } catch {
+                    _setAuthError('auth-login-err', 'Erro de conexão. Tente novamente.');
+                }
+            }
+
+            async function submitRegister() {
+                const name     = document.getElementById('auth-name').value.trim();
+                const email    = document.getElementById('auth-reg-email').value.trim();
+                const password = document.getElementById('auth-reg-password').value;
+                _setAuthError('auth-register-err', '');
+                try {
+                    const res = await fetch('/auth/register', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name, email, password }),
+                    });
+                    const data = await res.json().catch(() => ({}));
+                    if (!res.ok) {
+                        _setAuthError('auth-register-err', data.detail || 'Erro ao criar conta.');
+                        return;
+                    }
+                    document.getElementById('auth-verify-email').textContent = email;
+                    showAuthPanel('verify');
+                } catch {
+                    _setAuthError('auth-register-err', 'Erro de conexão. Tente novamente.');
+                }
+            }
+
+            document.addEventListener('DOMContentLoaded', () => {
+                document.getElementById('auth-overlay').addEventListener('click', function(e) {
+                    if (e.target === this) hideAuthModal();
+                });
+            });
 
             /* ═══ STATE ═══ */
             let ads = [];
@@ -1778,11 +2001,12 @@
             }
 
             /* ═══ TOAST ═══ */
-            function toast(msg) {
+            function toast(msg, type) {
                 const t = document.getElementById("toast");
                 t.textContent = msg;
+                t.className = 'toast' + (type ? ' ' + type : '');
                 t.classList.add("show");
-                setTimeout(() => t.classList.remove("show"), 2800);
+                setTimeout(() => t.classList.remove("show"), 3200);
             }
 
             /* ═══ NAV ═══ */
@@ -2263,7 +2487,27 @@
 
             /* ═══ INIT ═══ */
             (async () => {
+                // Handle email verification link: ?verify_token=...
+                const _params = new URLSearchParams(window.location.search);
+                const _verifyToken = _params.get('verify_token');
+                if (_verifyToken) {
+                    try {
+                        const _vRes = await fetch(`/auth/verify-email?token=${encodeURIComponent(_verifyToken)}`);
+                        if (_vRes.ok) {
+                            toast('Email confirmado! Faça login para continuar.', 'success');
+                        } else {
+                            toast('Link de verificação inválido ou expirado.', 'error');
+                        }
+                    } catch {
+                        toast('Erro ao verificar email. Tente novamente.', 'error');
+                    }
+                    history.replaceState(null, '', window.location.pathname);
+                }
+
                 await loadCurrentUser();
+                if (!_currentUser) {
+                    document.getElementById('auth-login-btn').style.display = '';
+                }
                 await loadAds();
                 renderDashboard();
             })();

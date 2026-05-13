@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from jose import JWTError
 from sqlalchemy.orm import Session
 
 from db.database import get_db
 from db.models.user import User
+from services.email import send_verification_email
 
 from . import service
 from .dependencies import get_current_user
@@ -14,6 +15,7 @@ from .schemas import (
     LoginRequest,
     RefreshRequest,
     RegisterRequest,
+    RegisterResponse,
     TokenResponse,
     UserResponse,
 )
@@ -23,16 +25,31 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
 
 @router.post(
     "/register",
-    response_model=TokenResponse,
+    response_model=RegisterResponse,
     status_code=201,
     summary="Registrar novo usuário",
 )
-def register(body: RegisterRequest, db: Session = Depends(get_db)) -> TokenResponse:
+def register(body: RegisterRequest, db: Session = Depends(get_db)) -> RegisterResponse:
     user = service.register_user(db, body.name, str(body.email), body.password)
-    return TokenResponse(
-        access_token=create_access_token(user.id),
-        refresh_token=create_refresh_token(user.id),
-    )
+    token = user.email_verification_token or ""
+    email_sent = send_verification_email(user.name, user.email, token)
+    return RegisterResponse(email=user.email, email_sent=email_sent)
+
+
+@router.get(
+    "/verify-email",
+    summary="Confirmar email via token",
+    responses={
+        200: {"description": "Email confirmado com sucesso"},
+        400: {"description": "Token inválido ou expirado"},
+    },
+)
+def verify_email(
+    token: str = Query(..., description="Token de verificação recebido por email"),
+    db: Session = Depends(get_db),
+) -> dict[str, object]:
+    service.verify_email_token(db, token)
+    return {"verified": True, "message": "Email confirmado com sucesso. Faça login para continuar."}
 
 
 @router.post(
