@@ -366,6 +366,225 @@ class TestMe:
         assert r.status_code == 401
 
 
+# ── POST /auth/resend-verification ────────────────────────────────────────────
+
+
+class TestResendVerification:
+    def test_always_returns_200_for_unknown_email(self, auth_client: TestClient) -> None:
+        r = auth_client.post(
+            "/auth/resend-verification",
+            json={"email": "ghost@example.com"},
+        )
+        assert r.status_code == 200
+        assert "message" in r.json()
+
+    def test_returns_200_for_unverified_user(
+        self, auth_client: TestClient, test_db: Session
+    ) -> None:
+        _register(auth_client)
+        r = auth_client.post(
+            "/auth/resend-verification",
+            json={"email": "user@example.com"},
+        )
+        assert r.status_code == 200
+
+    def test_generates_new_token(
+        self, auth_client: TestClient, test_db: Session
+    ) -> None:
+        _register(auth_client)
+        old_token = test_db.query(User).filter_by(email="user@example.com").first().email_verification_token
+        auth_client.post(
+            "/auth/resend-verification",
+            json={"email": "user@example.com"},
+        )
+        test_db.expire_all()
+        new_token = test_db.query(User).filter_by(email="user@example.com").first().email_verification_token
+        assert new_token != old_token
+
+    def test_ignores_already_verified_user(
+        self, auth_client: TestClient, test_db: Session
+    ) -> None:
+        _register(auth_client)
+        _verify_email(auth_client, test_db)
+        r = auth_client.post(
+            "/auth/resend-verification",
+            json={"email": "user@example.com"},
+        )
+        assert r.status_code == 200
+
+    def test_invalid_email_returns_422(self, auth_client: TestClient) -> None:
+        r = auth_client.post(
+            "/auth/resend-verification",
+            json={"email": "not-an-email"},
+        )
+        assert r.status_code == 422
+
+
+# ── POST /auth/forgot-password ─────────────────────────────────────────────────
+
+
+class TestForgotPassword:
+    def test_returns_200_for_unknown_email(self, auth_client: TestClient) -> None:
+        r = auth_client.post(
+            "/auth/forgot-password",
+            json={"email": "ghost@example.com"},
+        )
+        assert r.status_code == 200
+        assert "message" in r.json()
+
+    def test_returns_200_for_known_email(
+        self, auth_client: TestClient, test_db: Session
+    ) -> None:
+        _full_register(auth_client, test_db)
+        r = auth_client.post(
+            "/auth/forgot-password",
+            json={"email": "user@example.com"},
+        )
+        assert r.status_code == 200
+
+    def test_stores_reset_token_in_db(
+        self, auth_client: TestClient, test_db: Session
+    ) -> None:
+        _full_register(auth_client, test_db)
+        auth_client.post(
+            "/auth/forgot-password",
+            json={"email": "user@example.com"},
+        )
+        test_db.expire_all()
+        user = test_db.query(User).filter_by(email="user@example.com").first()
+        assert user is not None
+        assert user.password_reset_token is not None
+        assert user.password_reset_expires_at is not None
+
+    def test_generic_message_does_not_reveal_existence(
+        self, auth_client: TestClient, test_db: Session
+    ) -> None:
+        _full_register(auth_client, test_db)
+        r_known = auth_client.post(
+            "/auth/forgot-password",
+            json={"email": "user@example.com"},
+        ).json()["message"]
+        r_unknown = auth_client.post(
+            "/auth/forgot-password",
+            json={"email": "ghost@example.com"},
+        ).json()["message"]
+        assert r_known == r_unknown
+
+    def test_invalid_email_returns_422(self, auth_client: TestClient) -> None:
+        r = auth_client.post("/auth/forgot-password", json={"email": "bad"})
+        assert r.status_code == 422
+
+
+# ── POST /auth/reset-password ──────────────────────────────────────────────────
+
+
+class TestResetPassword:
+    def _request_reset(self, client: TestClient, test_db: Session, email: str = "user@example.com") -> str:
+        """Full flow: register → verify → request reset → return token from DB."""
+        _full_register(client, test_db, email)
+        client.post("/auth/forgot-password", json={"email": email})
+        test_db.expire_all()
+        user = test_db.query(User).filter_by(email=email).first()
+        assert user is not None and user.password_reset_token is not None
+        return user.password_reset_token
+
+    def test_valid_token_returns_200(
+        self, auth_client: TestClient, test_db: Session
+    ) -> None:
+        token = self._request_reset(auth_client, test_db)
+        r = auth_client.post(
+            "/auth/reset-password",
+            json={"token": token, "new_password": "NovaS3nh@!"},
+        )
+        assert r.status_code == 200
+        assert "message" in r.json()
+
+    def test_can_login_with_new_password(
+        self, auth_client: TestClient, test_db: Session
+    ) -> None:
+        token = self._request_reset(auth_client, test_db)
+        auth_client.post(
+            "/auth/reset-password",
+            json={"token": token, "new_password": "NovaS3nh@!"},
+        )
+        r = auth_client.post(
+            "/auth/login",
+            json={"email": "user@example.com", "password": "NovaS3nh@!"},
+        )
+        assert r.status_code == 200
+        assert "access_token" in r.json()
+
+    def test_old_password_rejected_after_reset(
+        self, auth_client: TestClient, test_db: Session
+    ) -> None:
+        token = self._request_reset(auth_client, test_db)
+        auth_client.post(
+            "/auth/reset-password",
+            json={"token": token, "new_password": "NovaS3nh@!"},
+        )
+        r = auth_client.post(
+            "/auth/login",
+            json={"email": "user@example.com", "password": "Senha1234"},
+        )
+        assert r.status_code == 401
+
+    def test_token_cleared_after_use(
+        self, auth_client: TestClient, test_db: Session
+    ) -> None:
+        token = self._request_reset(auth_client, test_db)
+        auth_client.post(
+            "/auth/reset-password",
+            json={"token": token, "new_password": "NovaS3nh@!"},
+        )
+        test_db.expire_all()
+        user = test_db.query(User).filter_by(email="user@example.com").first()
+        assert user is not None
+        assert user.password_reset_token is None
+        assert user.password_reset_expires_at is None
+
+    def test_token_cannot_be_reused(
+        self, auth_client: TestClient, test_db: Session
+    ) -> None:
+        token = self._request_reset(auth_client, test_db)
+        auth_client.post(
+            "/auth/reset-password",
+            json={"token": token, "new_password": "NovaS3nh@!"},
+        )
+        r = auth_client.post(
+            "/auth/reset-password",
+            json={"token": token, "new_password": "OutraSenha1234"},
+        )
+        assert r.status_code == 400
+
+    def test_invalid_token_returns_400(self, auth_client: TestClient) -> None:
+        r = auth_client.post(
+            "/auth/reset-password",
+            json={"token": "invalid-token", "new_password": "NovaS3nh@!"},
+        )
+        assert r.status_code == 400
+
+    def test_expired_token_returns_400(
+        self, auth_client: TestClient, test_db: Session
+    ) -> None:
+        token = self._request_reset(auth_client, test_db)
+        user = test_db.query(User).filter_by(email="user@example.com").first()
+        assert user is not None
+        user.password_reset_expires_at = datetime.now(timezone.utc) - timedelta(seconds=1)
+        test_db.commit()
+        r = auth_client.post(
+            "/auth/reset-password",
+            json={"token": token, "new_password": "NovaS3nh@!"},
+        )
+        assert r.status_code == 400
+
+    def test_short_password_returns_422(self, auth_client: TestClient) -> None:
+        r = auth_client.post(
+            "/auth/reset-password",
+            json={"token": "sometoken", "new_password": "short"},
+        )
+        assert r.status_code == 422
+
+
 # ── POST /auth/logout ──────────────────────────────────────────────────────────
 
 

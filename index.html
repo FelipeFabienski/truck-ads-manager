@@ -1766,6 +1766,7 @@
                     </div>
                     <button type="button" class="btn btn-primary auth-submit" onclick="submitLogin()">Entrar</button>
                     <div class="auth-switch">Não tem conta? <a onclick="showAuthPanel('register')">Cadastre-se</a></div>
+                    <div style="text-align:center;margin-top:10px"><a onclick="showAuthPanel('forgot')" style="font-size:12px;color:var(--text-tertiary);cursor:pointer;text-decoration:underline">Esqueci minha senha</a></div>
                 </div>
                 <!-- Register -->
                 <div id="auth-register" style="display:none">
@@ -1798,7 +1799,48 @@
                         <p>Enviamos um link de confirmação para <strong id="auth-verify-email"></strong>.</p>
                         <p>Clique no link para ativar sua conta e, em seguida, faça login.</p>
                     </div>
-                    <button type="button" class="btn btn-outline auth-submit" onclick="hideAuthModal()">Fechar</button>
+                    <button type="button" class="btn btn-outline auth-submit" onclick="resendVerification()">Reenviar confirmação</button>
+                    <button type="button" class="btn btn-outline auth-submit" onclick="hideAuthModal()" style="margin-top:6px">Fechar</button>
+                </div>
+                <!-- Forgot password -->
+                <div id="auth-forgot" style="display:none">
+                    <div class="auth-title">Esqueci minha senha</div>
+                    <div class="auth-sub">Informe seu email para receber as instruções.</div>
+                    <div class="auth-error" id="auth-forgot-err"></div>
+                    <div class="auth-field">
+                        <label>Email</label>
+                        <input type="email" id="auth-forgot-email" placeholder="seu@email.com" autocomplete="email"
+                               onkeydown="if(event.key==='Enter')submitForgotPassword()" />
+                    </div>
+                    <button type="button" class="btn btn-primary auth-submit" onclick="submitForgotPassword()">Enviar instruções</button>
+                    <div class="auth-switch">Lembrou a senha? <a onclick="showAuthPanel('login')">Entrar</a></div>
+                </div>
+                <!-- Forgot sent -->
+                <div id="auth-forgot-sent" style="display:none">
+                    <div class="auth-verify-msg">
+                        <div class="auth-verify-icon">✅</div>
+                        <div class="auth-title" style="text-align:center;margin-bottom:12px">Instruções enviadas</div>
+                        <p>Se o email estiver cadastrado, você receberá as instruções em breve.</p>
+                        <p>Verifique sua caixa de entrada e a pasta de spam.</p>
+                    </div>
+                    <button type="button" class="btn btn-outline auth-submit" onclick="showAuthPanel('login')">Voltar ao login</button>
+                </div>
+                <!-- Reset password -->
+                <div id="auth-reset" style="display:none">
+                    <div class="auth-title">Nova senha</div>
+                    <div class="auth-sub">Defina sua nova senha de acesso.</div>
+                    <div class="auth-error" id="auth-reset-err"></div>
+                    <div class="auth-field">
+                        <label>Nova senha</label>
+                        <input type="password" id="auth-reset-password" placeholder="Mínimo 8 caracteres" autocomplete="new-password"
+                               onkeydown="if(event.key==='Enter')submitResetPassword()" />
+                    </div>
+                    <div class="auth-field">
+                        <label>Confirmar senha</label>
+                        <input type="password" id="auth-reset-confirm" placeholder="Repita a nova senha" autocomplete="new-password"
+                               onkeydown="if(event.key==='Enter')submitResetPassword()" />
+                    </div>
+                    <button type="button" class="btn btn-primary auth-submit" onclick="submitResetPassword()">Redefinir senha</button>
                 </div>
             </div>
         </div>
@@ -1808,6 +1850,8 @@
             let _accessToken = null;
             let _refreshToken = null;
             let _currentUser = null;
+            let _pendingResetToken = null;
+            let _pendingVerifyEmail = null;
 
             function _getAccessToken() { return _accessToken || localStorage.getItem('auth_access_token'); }
             function _getRefreshToken() { return _refreshToken || localStorage.getItem('auth_refresh_token'); }
@@ -1864,11 +1908,13 @@
             }
 
             function showAuthPanel(panel) {
-                document.getElementById('auth-login').style.display    = panel === 'login'    ? '' : 'none';
-                document.getElementById('auth-register').style.display = panel === 'register' ? '' : 'none';
-                document.getElementById('auth-verify').style.display   = panel === 'verify'   ? '' : 'none';
-                _setAuthError('auth-login-err', '');
-                _setAuthError('auth-register-err', '');
+                ['login', 'register', 'verify', 'forgot', 'forgot-sent', 'reset'].forEach(p => {
+                    const el = document.getElementById('auth-' + p);
+                    if (el) el.style.display = (p === panel) ? '' : 'none';
+                });
+                ['auth-login-err', 'auth-register-err', 'auth-forgot-err', 'auth-reset-err'].forEach(id => {
+                    _setAuthError(id, '');
+                });
             }
 
             function _setAuthError(id, msg) {
@@ -1922,10 +1968,77 @@
                         _setAuthError('auth-register-err', data.detail || 'Erro ao criar conta.');
                         return;
                     }
+                    _pendingVerifyEmail = email;
                     document.getElementById('auth-verify-email').textContent = email;
                     showAuthPanel('verify');
                 } catch {
                     _setAuthError('auth-register-err', 'Erro de conexão. Tente novamente.');
+                }
+            }
+
+            async function submitForgotPassword() {
+                const email = document.getElementById('auth-forgot-email').value.trim();
+                _setAuthError('auth-forgot-err', '');
+                try {
+                    const res = await fetch('/auth/forgot-password', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email }),
+                    });
+                    if (!res.ok) {
+                        const data = await res.json().catch(() => ({}));
+                        _setAuthError('auth-forgot-err', data.detail || 'Erro ao enviar. Tente novamente.');
+                        return;
+                    }
+                    showAuthPanel('forgot-sent');
+                } catch {
+                    _setAuthError('auth-forgot-err', 'Erro de conexão. Tente novamente.');
+                }
+            }
+
+            async function submitResetPassword() {
+                const password = document.getElementById('auth-reset-password').value;
+                const confirm  = document.getElementById('auth-reset-confirm').value;
+                _setAuthError('auth-reset-err', '');
+                if (password !== confirm) {
+                    _setAuthError('auth-reset-err', 'As senhas não coincidem.');
+                    return;
+                }
+                if (!_pendingResetToken) {
+                    _setAuthError('auth-reset-err', 'Token inválido. Solicite um novo link.');
+                    return;
+                }
+                try {
+                    const res = await fetch('/auth/reset-password', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ token: _pendingResetToken, new_password: password }),
+                    });
+                    const data = await res.json().catch(() => ({}));
+                    if (!res.ok) {
+                        _setAuthError('auth-reset-err', data.detail || 'Token inválido ou expirado.');
+                        return;
+                    }
+                    _pendingResetToken = null;
+                    toast('Senha atualizada! Faça login com a nova senha.', 'success');
+                    showAuthPanel('login');
+                } catch {
+                    _setAuthError('auth-reset-err', 'Erro de conexão. Tente novamente.');
+                }
+            }
+
+            async function resendVerification() {
+                const email = _pendingVerifyEmail || document.getElementById('auth-verify-email').textContent.trim();
+                if (!email) return;
+                try {
+                    await fetch('/auth/resend-verification', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email }),
+                    });
+                    toast('Email reenviado! Verifique sua caixa de entrada.', 'success');
+                } catch {
+                    toast('Erro ao reenviar. Tente novamente.', 'error');
                 }
             }
 
@@ -2537,8 +2650,9 @@
 
             /* ═══ INIT ═══ */
             (async () => {
-                // Handle email verification link: ?verify_token=...
                 const _params = new URLSearchParams(window.location.search);
+
+                // Handle email verification link: ?verify_token=...
                 const _verifyToken = _params.get('verify_token');
                 if (_verifyToken) {
                     try {
@@ -2554,8 +2668,17 @@
                     history.replaceState(null, '', window.location.pathname);
                 }
 
+                // Handle password reset link: ?reset_token=...
+                const _resetToken = _params.get('reset_token');
+                if (_resetToken) {
+                    _pendingResetToken = _resetToken;
+                    history.replaceState(null, '', window.location.pathname);
+                }
+
                 await loadCurrentUser();
-                if (!_currentUser) {
+                if (_pendingResetToken) {
+                    showAuthModal('reset');
+                } else if (!_currentUser) {
                     document.getElementById('auth-login-btn').style.display = '';
                 }
                 await loadAds();

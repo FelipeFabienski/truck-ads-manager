@@ -1,3 +1,4 @@
+"""Kept as a compatibility stub — use services.email.service directly."""
 from __future__ import annotations
 
 import logging

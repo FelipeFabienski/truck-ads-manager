@@ -6,16 +6,20 @@ from sqlalchemy.orm import Session
 
 from db.database import get_db
 from db.models.user import User
-from services.email import send_verification_email
+from services.email import send_password_reset_email, send_verification_email, send_welcome_email
 
 from . import service
 from .dependencies import get_current_user
 from .jwt_utils import create_access_token, create_refresh_token, decode_refresh_token
 from .schemas import (
+    ForgotPasswordRequest,
     LoginRequest,
+    MessageResponse,
     RefreshRequest,
     RegisterRequest,
     RegisterResponse,
+    ResetPasswordRequest,
+    ResendVerificationRequest,
     TokenResponse,
     UserResponse,
 )
@@ -48,7 +52,8 @@ def verify_email(
     token: str = Query(..., description="Token de verificação recebido por email"),
     db: Session = Depends(get_db),
 ) -> dict[str, object]:
-    service.verify_email_token(db, token)
+    user = service.verify_email_token(db, token)
+    send_welcome_email(user.name, user.email)
     return {"verified": True, "message": "Email confirmado com sucesso. Faça login para continuar."}
 
 
@@ -88,6 +93,51 @@ def refresh(body: RefreshRequest, db: Session = Depends(get_db)) -> TokenRespons
         access_token=create_access_token(user.id),
         refresh_token=create_refresh_token(user.id),
     )
+
+
+@router.post(
+    "/resend-verification",
+    response_model=MessageResponse,
+    summary="Reenviar email de verificação",
+)
+def resend_verification(
+    body: ResendVerificationRequest, db: Session = Depends(get_db)
+) -> MessageResponse:
+    _GENERIC = "Se o email estiver cadastrado e ainda não estiver verificado, enviaremos uma nova confirmação."
+    result = service.resend_verification(db, str(body.email))
+    if result is not None:
+        name, token = result
+        send_verification_email(name, str(body.email), token)
+    return MessageResponse(message=_GENERIC)
+
+
+@router.post(
+    "/forgot-password",
+    response_model=MessageResponse,
+    summary="Solicitar redefinição de senha",
+)
+def forgot_password(
+    body: ForgotPasswordRequest, db: Session = Depends(get_db)
+) -> MessageResponse:
+    _GENERIC = "Se o email estiver cadastrado, enviaremos instruções para redefinir a senha."
+    result = service.request_password_reset(db, str(body.email))
+    if result is not None:
+        name, token = result
+        send_password_reset_email(name, str(body.email), token)
+    return MessageResponse(message=_GENERIC)
+
+
+@router.post(
+    "/reset-password",
+    response_model=MessageResponse,
+    summary="Redefinir senha via token",
+    responses={400: {"description": "Token inválido ou expirado"}},
+)
+def reset_password(
+    body: ResetPasswordRequest, db: Session = Depends(get_db)
+) -> MessageResponse:
+    service.reset_password(db, body.token, body.new_password)
+    return MessageResponse(message="Senha atualizada com sucesso.")
 
 
 @router.post("/logout", summary="Encerrar sessão")

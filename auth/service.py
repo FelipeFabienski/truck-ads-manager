@@ -69,6 +69,58 @@ def verify_email_token(db: Session, token: str) -> User:
     return user
 
 
+def _password_reset_expire_minutes() -> int:
+    return int(os.getenv("PASSWORD_RESET_EXPIRE_MINUTES", "30"))
+
+
+def resend_verification(db: Session, email: str) -> tuple[str, str] | None:
+    """Returns (name, new_token) to send, or None if email should not be sent."""
+    email = email.lower().strip()
+    user = db.query(User).filter_by(email=email).first()
+    if not user or user.is_verified:
+        return None
+    token, expires = _generate_verification_token()
+    user.email_verification_token = token
+    user.email_verification_expires_at = expires
+    db.commit()
+    return user.name, token
+
+
+def request_password_reset(db: Session, email: str) -> tuple[str, str] | None:
+    """Returns (name, reset_token) if the user exists and is active, else None."""
+    email = email.lower().strip()
+    user = db.query(User).filter_by(email=email).first()
+    if not user or not user.is_active:
+        return None
+    token = secrets.token_urlsafe(32)
+    expires = datetime.now(timezone.utc) + timedelta(minutes=_password_reset_expire_minutes())
+    user.password_reset_token = token
+    user.password_reset_expires_at = expires
+    db.commit()
+    return user.name, token
+
+
+def reset_password(db: Session, token: str, new_password: str) -> None:
+    """Sets a new password via a valid, unexpired reset token. Raises 400 on invalid token."""
+    _invalid = HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail="Token de redefinição inválido ou expirado",
+    )
+    user = db.query(User).filter_by(password_reset_token=token).first()
+    if not user:
+        raise _invalid
+    expires_at = user.password_reset_expires_at
+    if expires_at is not None and expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    if expires_at is None or expires_at < datetime.now(timezone.utc):
+        raise _invalid
+    # TODO: invalidate existing sessions when refresh token blacklist is implemented
+    user.password_hash = hash_password(new_password)
+    user.password_reset_token = None
+    user.password_reset_expires_at = None
+    db.commit()
+
+
 def authenticate_user(db: Session, email: str, plain_password: str) -> User:
     email = email.lower().strip()
     user = db.query(User).filter_by(email=email).first()
