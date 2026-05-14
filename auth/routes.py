@@ -92,6 +92,8 @@ def refresh(body: RefreshRequest, db: Session = Depends(get_db)) -> TokenRespons
 
 @router.post("/logout", summary="Encerrar sessão")
 def logout() -> dict[str, bool]:
+    # Tokens are invalidated client-side by clearing localStorage.
+    # TODO: implement server-side refresh token blacklist for full revocation.
     return {"ok": True}
 
 

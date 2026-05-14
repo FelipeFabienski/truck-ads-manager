@@ -9,6 +9,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session
 
 from ads.providers.mock_provider import MockAdsProvider
 from ads.truck.service import TruckAdService
@@ -338,4 +339,136 @@ class TestGetMetrics:
 
     def test_unknown_campaign_returns_404(self, client):
         r = client.get("/ads/truck/cmp_ghost/metricas")
+        assert r.status_code == 404
+
+
+# ── Helpers for auth-aware tests ──────────────────────────────────────────────
+
+_TRUCK_PAYLOAD: dict = {
+    "modelo": "Volvo FH 540",
+    "cor": "Branco",
+    "ano": "2023",
+    "preco": "R$ 380.000",
+    "km": "120.000 km",
+    "budget": 150.0,
+    "duracao": 30,
+    "vendedor_nome": "Carlos Silva",
+    "vendedor_wpp": "41999990000",
+    "cidade": "Curitiba",
+    "estado": "PR",
+    "publico_idade_min": 25,
+    "publico_idade_max": 55,
+    "publico_raio": 80,
+    "publico_genero": "male",
+    "publico_interesses": "Logística, Transporte",
+    "publico_posicionamentos": ["feed", "stories"],
+}
+
+
+def _login_as(client: TestClient, test_db: Session, email: str, name: str = "User") -> str:
+    """Register, verify email, login — returns access_token."""
+    client.post("/auth/register", json={"name": name, "email": email, "password": "Senha1234"})
+    user = test_db.query(User).filter_by(email=email).first()
+    assert user is not None and user.email_verification_token is not None
+    client.get(f"/auth/verify-email?token={user.email_verification_token}")
+    r = client.post("/auth/login", json={"email": email, "password": "Senha1234"})
+    return r.json()["access_token"]
+
+
+# ── TestAuthRequired ───────────────────────────────────────────────────────────
+
+class TestAuthRequired:
+    """All truck endpoints must return 401 when called without a valid token."""
+
+    def test_list_without_token_returns_401(self, auth_client: TestClient) -> None:
+        r = auth_client.get("/ads/truck/")
+        assert r.status_code == 401
+
+    def test_create_without_token_returns_401(self, auth_client: TestClient) -> None:
+        r = auth_client.post("/ads/truck/", json=_TRUCK_PAYLOAD)
+        assert r.status_code == 401
+
+    def test_get_detail_without_token_returns_401(self, auth_client: TestClient) -> None:
+        r = auth_client.get("/ads/truck/cmp_any")
+        assert r.status_code == 401
+
+    def test_pause_without_token_returns_401(self, auth_client: TestClient) -> None:
+        r = auth_client.patch("/ads/truck/cmp_any/pausar")
+        assert r.status_code == 401
+
+    def test_activate_without_token_returns_401(self, auth_client: TestClient) -> None:
+        r = auth_client.patch("/ads/truck/cmp_any/ativar")
+        assert r.status_code == 401
+
+    def test_delete_without_token_returns_401(self, auth_client: TestClient) -> None:
+        r = auth_client.delete("/ads/truck/cmp_any")
+        assert r.status_code == 401
+
+    def test_metrics_without_token_returns_401(self, auth_client: TestClient) -> None:
+        r = auth_client.get("/ads/truck/cmp_any/metricas")
+        assert r.status_code == 401
+
+    def test_invalid_token_returns_401(self, auth_client: TestClient) -> None:
+        r = auth_client.get(
+            "/ads/truck/",
+            headers={"Authorization": "Bearer invalid.token.here"},
+        )
+        assert r.status_code == 401
+
+
+# ── TestMultiTenantIsolation ──────────────────────────────────────────────────
+
+class TestMultiTenantIsolation:
+    """User A cannot see or modify User B's campaigns."""
+
+    def test_list_campaigns_is_user_scoped(
+        self, auth_client: TestClient, test_db: Session
+    ) -> None:
+        token_a = _login_as(auth_client, test_db, "usera@example.com", "User A")
+        r = auth_client.post(
+            "/ads/truck/",
+            json=_TRUCK_PAYLOAD,
+            headers={"Authorization": f"Bearer {token_a}"},
+        )
+        assert r.status_code == 201
+
+        token_b = _login_as(auth_client, test_db, "userb@example.com", "User B")
+        items = auth_client.get(
+            "/ads/truck/",
+            headers={"Authorization": f"Bearer {token_b}"},
+        ).json()
+        assert items == []
+
+    def test_get_campaign_of_other_user_returns_404(
+        self, auth_client: TestClient, test_db: Session
+    ) -> None:
+        token_a = _login_as(auth_client, test_db, "usera2@example.com", "User A2")
+        campaign_id = auth_client.post(
+            "/ads/truck/",
+            json=_TRUCK_PAYLOAD,
+            headers={"Authorization": f"Bearer {token_a}"},
+        ).json()["campaign_id"]
+
+        token_b = _login_as(auth_client, test_db, "userb2@example.com", "User B2")
+        r = auth_client.get(
+            f"/ads/truck/{campaign_id}",
+            headers={"Authorization": f"Bearer {token_b}"},
+        )
+        assert r.status_code == 404
+
+    def test_delete_campaign_of_other_user_returns_404(
+        self, auth_client: TestClient, test_db: Session
+    ) -> None:
+        token_a = _login_as(auth_client, test_db, "usera3@example.com", "User A3")
+        campaign_id = auth_client.post(
+            "/ads/truck/",
+            json=_TRUCK_PAYLOAD,
+            headers={"Authorization": f"Bearer {token_a}"},
+        ).json()["campaign_id"]
+
+        token_b = _login_as(auth_client, test_db, "userb3@example.com", "User B3")
+        r = auth_client.delete(
+            f"/ads/truck/{campaign_id}",
+            headers={"Authorization": f"Bearer {token_b}"},
+        )
         assert r.status_code == 404

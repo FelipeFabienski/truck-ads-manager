@@ -1805,31 +1805,41 @@
 
         <script>
             /* ═══ AUTH STATE ═══ */
-            let _jwt = null;
+            let _accessToken = null;
+            let _refreshToken = null;
             let _currentUser = null;
 
-            function _getJwt() { return _jwt || localStorage.getItem('jwt'); }
+            function _getAccessToken() { return _accessToken || localStorage.getItem('auth_access_token'); }
+            function _getRefreshToken() { return _refreshToken || localStorage.getItem('auth_refresh_token'); }
 
-            function _saveJwt(token) {
-                _jwt = token;
-                localStorage.setItem('jwt', token);
+            function _saveTokens(access, refresh) {
+                _accessToken = access;
+                _refreshToken = refresh;
+                localStorage.setItem('auth_access_token', access);
+                if (refresh) localStorage.setItem('auth_refresh_token', refresh);
             }
 
-            function _clearJwt() {
-                _jwt = null;
+            function _clearSession() {
+                _accessToken = null;
+                _refreshToken = null;
+                _currentUser = null;
+                localStorage.removeItem('auth_access_token');
+                localStorage.removeItem('auth_refresh_token');
                 localStorage.removeItem('jwt');
             }
 
-            async function logout() {
-                _clearJwt();
-                _currentUser = null;
+            function _showLoginBtn() {
                 document.getElementById('user-info').style.display = 'none';
                 document.getElementById('auth-login-btn').style.display = '';
             }
 
+            async function logout() {
+                _clearSession();
+                _showLoginBtn();
+            }
+
             async function loadCurrentUser() {
-                const token = _getJwt();
-                if (!token) return;
+                if (!_getAccessToken() && !_getRefreshToken()) return;
                 try {
                     const user = await apiCall('GET', '/auth/me');
                     _currentUser = user;
@@ -1839,7 +1849,7 @@
                     document.getElementById('user-info').style.display = 'flex';
                     document.getElementById('auth-login-btn').style.display = 'none';
                 } catch {
-                    _clearJwt();
+                    _clearSession();
                 }
             }
 
@@ -1886,7 +1896,7 @@
                         _setAuthError('auth-login-err', data.detail || 'Email ou senha inválidos.');
                         return;
                     }
-                    _saveJwt(data.access_token);
+                    _saveTokens(data.access_token, data.refresh_token);
                     hideAuthModal();
                     await loadCurrentUser();
                     await loadAds();
@@ -1953,16 +1963,53 @@
             }
 
             /* ═══ API CLIENT ═══ */
+            let _refreshPromise = null;
+
+            async function _doRefresh() {
+                const rt = _getRefreshToken();
+                if (!rt) throw new Error('no refresh token');
+                const res = await fetch('/auth/refresh', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ refresh_token: rt }),
+                });
+                if (!res.ok) throw new Error('refresh failed');
+                const data = await res.json();
+                _saveTokens(data.access_token, data.refresh_token);
+                return data.access_token;
+            }
+
             async function apiCall(method, path, body) {
-                const token = _getJwt();
+                const token = _getAccessToken();
                 const headers = { 'Content-Type': 'application/json' };
                 if (token) headers['Authorization'] = `Bearer ${token}`;
                 const opts = { method, headers };
                 if (body) opts.body = JSON.stringify(body);
                 const res = await fetch(path, opts);
                 if (res.status === 401) {
-                    _clearJwt();
-                    throw new Error('Sessão expirada. Faça login novamente.');
+                    if (!_refreshPromise) {
+                        _refreshPromise = _doRefresh().finally(() => { _refreshPromise = null; });
+                    }
+                    let newToken;
+                    try {
+                        newToken = await _refreshPromise;
+                    } catch {
+                        _clearSession();
+                        throw new Error('Sessão expirada. Faça login novamente.');
+                    }
+                    const retryHeaders = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${newToken}` };
+                    const retryOpts = { method, headers: retryHeaders };
+                    if (body) retryOpts.body = JSON.stringify(body);
+                    const retryRes = await fetch(path, retryOpts);
+                    if (retryRes.status === 401) {
+                        _clearSession();
+                        throw new Error('Sessão expirada. Faça login novamente.');
+                    }
+                    if (!retryRes.ok) {
+                        const err = await retryRes.json().catch(() => ({}));
+                        throw new Error(err.message || err.detail || `HTTP ${retryRes.status}`);
+                    }
+                    return retryRes.json();
                 }
                 if (!res.ok) {
                     const err = await res.json().catch(() => ({}));
@@ -2078,7 +2125,10 @@
                 try {
                     const form = new FormData();
                     form.append('file', file, file.name);
-                    const res = await fetch('/ads/truck/upload', { method: 'POST', body: form });
+                    const _uploadHeaders = {};
+                    const _uploadToken = _getAccessToken();
+                    if (_uploadToken) _uploadHeaders['Authorization'] = `Bearer ${_uploadToken}`;
+                    const res = await fetch('/ads/truck/upload', { method: 'POST', body: form, headers: _uploadHeaders });
                     const json = await res.json();
                     if (res.ok && json.image_hash) {
                         uploadedImageHash = json.image_hash;
