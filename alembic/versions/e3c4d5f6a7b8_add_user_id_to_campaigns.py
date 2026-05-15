@@ -16,18 +16,15 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.add_column(
-        "campaigns",
-        sa.Column(
-            "user_id",
-            sa.Integer(),
-            sa.ForeignKey("users.id", ondelete="SET NULL"),
-            nullable=True,
-        ),
-    )
-    op.create_index("ix_campaigns_user_id", "campaigns", ["user_id"])
+    op.execute(sa.text(
+        "ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS "
+        "user_id INTEGER REFERENCES users(id) ON DELETE SET NULL"
+    ))
+    op.execute(sa.text(
+        "CREATE INDEX IF NOT EXISTS ix_campaigns_user_id ON campaigns (user_id)"
+    ))
 
 
 def downgrade() -> None:
-    op.drop_index("ix_campaigns_user_id", table_name="campaigns")
-    op.drop_column("campaigns", "user_id")
+    op.execute(sa.text("DROP INDEX IF EXISTS ix_campaigns_user_id"))
+    op.execute(sa.text("ALTER TABLE campaigns DROP COLUMN IF EXISTS user_id"))

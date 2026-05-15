@@ -16,53 +16,63 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Add new auth columns
-    op.add_column("users", sa.Column("password_hash", sa.String(), nullable=True))
-    op.add_column(
-        "users",
-        sa.Column("is_active", sa.Boolean(), nullable=False, server_default="true"),
-    )
-    op.add_column(
-        "users",
-        sa.Column("is_verified", sa.Boolean(), nullable=False, server_default="false"),
-    )
-    op.add_column(
-        "users",
-        sa.Column(
-            "updated_at",
-            sa.DateTime(timezone=True),
-            nullable=False,
-            server_default=sa.text("now()"),
-        ),
-    )
+    op.execute(sa.text("ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash VARCHAR"))
+    op.execute(sa.text(
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT true"
+    ))
+    op.execute(sa.text(
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_verified BOOLEAN NOT NULL DEFAULT false"
+    ))
+    op.execute(sa.text(
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now()"
+    ))
 
-    # Remove Facebook OAuth columns
-    op.drop_column("users", "access_token_enc")
-    op.drop_column("users", "token_expires_at")
-    op.drop_column("users", "active_ad_account_id")
+    op.execute(sa.text("ALTER TABLE users DROP COLUMN IF EXISTS access_token_enc"))
+    op.execute(sa.text("ALTER TABLE users DROP COLUMN IF EXISTS token_expires_at"))
+    op.execute(sa.text("ALTER TABLE users DROP COLUMN IF EXISTS active_ad_account_id"))
 
-    # Ensure email is NOT NULL and has a unique index
-    op.execute("UPDATE users SET email = 'unknown_' || id || '@placeholder.invalid' WHERE email IS NULL")
-    op.alter_column("users", "email", existing_type=sa.String(), nullable=False)
-    op.create_index("ix_users_email", "users", ["email"], unique=True)
+    op.execute(sa.text(
+        "UPDATE users SET email = 'unknown_' || id || '@placeholder.invalid' WHERE email IS NULL"
+    ))
+    op.execute(sa.text("""
+        DO $$
+        BEGIN
+            IF EXISTS (
+                SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'users' AND column_name = 'email' AND is_nullable = 'YES'
+            ) THEN
+                ALTER TABLE users ALTER COLUMN email SET NOT NULL;
+            END IF;
+        END $$
+    """))
+    op.execute(sa.text(
+        "CREATE UNIQUE INDEX IF NOT EXISTS ix_users_email ON users (email)"
+    ))
 
 
 def downgrade() -> None:
-    op.drop_index("ix_users_email", table_name="users")
-    op.alter_column("users", "email", existing_type=sa.String(), nullable=True)
-    op.add_column(
-        "users",
-        sa.Column("active_ad_account_id", sa.String(), nullable=True),
-    )
-    op.add_column(
-        "users",
-        sa.Column("token_expires_at", sa.DateTime(timezone=True), nullable=True),
-    )
-    op.add_column(
-        "users",
-        sa.Column("access_token_enc", sa.String(), nullable=True),
-    )
-    op.drop_column("users", "updated_at")
-    op.drop_column("users", "is_verified")
-    op.drop_column("users", "is_active")
-    op.drop_column("users", "password_hash")
+    op.execute(sa.text("DROP INDEX IF EXISTS ix_users_email"))
+    op.execute(sa.text("""
+        DO $$
+        BEGIN
+            IF EXISTS (
+                SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'users' AND column_name = 'email' AND is_nullable = 'NO'
+            ) THEN
+                ALTER TABLE users ALTER COLUMN email DROP NOT NULL;
+            END IF;
+        END $$
+    """))
+    op.execute(sa.text(
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS active_ad_account_id VARCHAR"
+    ))
+    op.execute(sa.text(
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS token_expires_at TIMESTAMPTZ"
+    ))
+    op.execute(sa.text(
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS access_token_enc VARCHAR"
+    ))
+    op.execute(sa.text("ALTER TABLE users DROP COLUMN IF EXISTS updated_at"))
+    op.execute(sa.text("ALTER TABLE users DROP COLUMN IF EXISTS is_verified"))
+    op.execute(sa.text("ALTER TABLE users DROP COLUMN IF EXISTS is_active"))
+    op.execute(sa.text("ALTER TABLE users DROP COLUMN IF EXISTS password_hash"))

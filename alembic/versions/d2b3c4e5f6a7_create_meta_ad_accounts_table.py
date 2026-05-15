@@ -16,22 +16,20 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.create_table(
-        "meta_ad_accounts",
-        sa.Column("id", sa.Integer(), primary_key=True, index=True),
-        sa.Column(
-            "user_id",
-            sa.Integer(),
-            sa.ForeignKey("users.id", ondelete="CASCADE"),
-            nullable=False,
-            index=True,
-        ),
-        sa.Column("ad_account_id", sa.String(), nullable=False),
-        sa.Column("account_name", sa.String(), nullable=True),
-        sa.Column("currency", sa.String(), nullable=True),
-        sa.Column("account_status", sa.Integer(), nullable=True),
-    )
+    op.execute(sa.text("""
+        CREATE TABLE IF NOT EXISTS meta_ad_accounts (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            ad_account_id VARCHAR NOT NULL,
+            account_name VARCHAR,
+            currency VARCHAR,
+            account_status INTEGER
+        )
+    """))
+    op.execute(sa.text(
+        "CREATE INDEX IF NOT EXISTS ix_meta_ad_accounts_user_id ON meta_ad_accounts (user_id)"
+    ))
 
 
 def downgrade() -> None:
-    op.drop_table("meta_ad_accounts")
+    op.execute(sa.text("DROP TABLE IF EXISTS meta_ad_accounts"))

@@ -16,23 +16,23 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.create_table(
-        "users",
-        sa.Column("id", sa.Integer(), primary_key=True, index=True),
-        sa.Column("facebook_user_id", sa.String(), nullable=False, unique=True, index=True),
-        sa.Column("name", sa.String(), nullable=False),
-        sa.Column("email", sa.String(), nullable=True),
-        sa.Column("access_token_enc", sa.String(), nullable=False),
-        sa.Column("token_expires_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("active_ad_account_id", sa.String(), nullable=True),
-        sa.Column(
-            "created_at",
-            sa.DateTime(timezone=True),
-            nullable=False,
-            server_default=sa.text("now()"),
-        ),
-    )
+    # Old Facebook OAuth schema — later migrations transform this into the current schema.
+    op.execute(sa.text("""
+        CREATE TABLE IF NOT EXISTS users (
+            id SERIAL PRIMARY KEY,
+            facebook_user_id VARCHAR NOT NULL,
+            name VARCHAR NOT NULL,
+            email VARCHAR,
+            access_token_enc VARCHAR NOT NULL,
+            token_expires_at TIMESTAMPTZ,
+            active_ad_account_id VARCHAR,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        )
+    """))
+    op.execute(sa.text(
+        "CREATE UNIQUE INDEX IF NOT EXISTS ix_users_facebook_user_id ON users (facebook_user_id)"
+    ))
 
 
 def downgrade() -> None:
-    op.drop_table("users")
+    op.execute(sa.text("DROP TABLE IF EXISTS users"))

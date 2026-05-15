@@ -16,24 +16,43 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.drop_table("meta_ad_accounts")
-    op.drop_column("users", "facebook_user_id")
-    op.alter_column("users", "access_token_enc", existing_type=sa.String(), nullable=True)
+    op.execute(sa.text("DROP TABLE IF EXISTS meta_ad_accounts"))
+    op.execute(sa.text("ALTER TABLE users DROP COLUMN IF EXISTS facebook_user_id"))
+    op.execute(sa.text("""
+        DO $$
+        BEGIN
+            IF EXISTS (
+                SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'users' AND column_name = 'access_token_enc'
+            ) THEN
+                ALTER TABLE users ALTER COLUMN access_token_enc DROP NOT NULL;
+            END IF;
+        END $$
+    """))
 
 
 def downgrade() -> None:
-    op.alter_column("users", "access_token_enc", existing_type=sa.String(), nullable=False, server_default="")
-    op.add_column(
-        "users",
-        sa.Column("facebook_user_id", sa.String(), nullable=True),
-    )
-    op.create_table(
-        "meta_ad_accounts",
-        sa.Column("id", sa.Integer(), nullable=False),
-        sa.Column("user_id", sa.Integer(), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("ad_account_id", sa.String(), nullable=False),
-        sa.Column("account_name", sa.String(), nullable=True),
-        sa.Column("currency", sa.String(), nullable=True),
-        sa.Column("account_status", sa.Integer(), nullable=True),
-        sa.PrimaryKeyConstraint("id"),
-    )
+    op.execute(sa.text("""
+        DO $$
+        BEGIN
+            IF EXISTS (
+                SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'users' AND column_name = 'access_token_enc'
+            ) THEN
+                ALTER TABLE users ALTER COLUMN access_token_enc SET NOT NULL;
+            END IF;
+        END $$
+    """))
+    op.execute(sa.text(
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS facebook_user_id VARCHAR"
+    ))
+    op.execute(sa.text("""
+        CREATE TABLE IF NOT EXISTS meta_ad_accounts (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            ad_account_id VARCHAR NOT NULL,
+            account_name VARCHAR,
+            currency VARCHAR,
+            account_status INTEGER
+        )
+    """))

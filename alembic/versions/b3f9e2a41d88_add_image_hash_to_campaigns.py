@@ -17,11 +17,33 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.add_column(
-        "campaigns",
-        sa.Column("image_hash", sa.String(), nullable=True),
-    )
+    # Safety: recreate campaigns in case root migration was a no-op on prod.
+    op.execute(sa.text("""
+        CREATE TABLE IF NOT EXISTS campaigns (
+            id SERIAL PRIMARY KEY,
+            campaign_id VARCHAR NOT NULL,
+            external_ad_id VARCHAR,
+            modelo VARCHAR NOT NULL,
+            cor VARCHAR NOT NULL,
+            ano VARCHAR NOT NULL,
+            preco VARCHAR,
+            km VARCHAR,
+            cidade VARCHAR NOT NULL,
+            status VARCHAR NOT NULL DEFAULT 'rascunho',
+            budget DOUBLE PRECISION NOT NULL,
+            leads INTEGER DEFAULT 0,
+            spend DOUBLE PRECISION DEFAULT 0.0,
+            targeting_data JSON,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        )
+    """))
+    op.execute(sa.text(
+        "CREATE UNIQUE INDEX IF NOT EXISTS ix_campaigns_campaign_id ON campaigns (campaign_id)"
+    ))
+    op.execute(sa.text(
+        "ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS image_hash VARCHAR"
+    ))
 
 
 def downgrade() -> None:
-    op.drop_column("campaigns", "image_hash")
+    op.execute(sa.text("ALTER TABLE campaigns DROP COLUMN IF EXISTS image_hash"))
