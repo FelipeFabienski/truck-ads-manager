@@ -72,7 +72,7 @@ class _ProviderAdapter:
                 "name": f"Ad — {req.modelo} {req.ano}",
                 "copy": ai.ad_copy,
                 "headline": ai.headline,
-                "creative": {"type": "image", "url": "", "caption": ai.roteiro},
+                "creative": {"type": "image", "url": "", "caption": ""},
                 "destination": f"https://wa.me/{req.vendedor_wpp}",
                 "image_hash": req.image_hash,
             },
@@ -341,7 +341,6 @@ class TruckAdService:
             "km": record.km or "",
             "copy": ai_content.ad_copy,
             "headline": ai_content.headline,
-            "roteiro": ai_content.roteiro,
             "budget": record.budget,
             "created": dt.strftime("%d/%m/%Y"),
         })
@@ -371,7 +370,6 @@ class TruckAdService:
             "km": req.km or "",
             "copy": ai.ad_copy,
             "headline": ai.headline,
-            "roteiro": ai.roteiro,
             "budget": req.budget,
             "created": dt.strftime("%d/%m/%Y"),
         })

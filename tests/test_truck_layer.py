@@ -146,15 +146,10 @@ class TestMockAIGenerator:
         content = MockAIGenerator().generate(valid_request)
         assert content.ad_copy
         assert content.headline
-        assert content.roteiro
 
     def test_copy_mentions_modelo(self, valid_request):
         content = MockAIGenerator().generate(valid_request)
         assert "Volvo FH 540" in content.ad_copy
-
-    def test_roteiro_contains_wpp_link(self, valid_request):
-        content = MockAIGenerator().generate(valid_request)
-        assert valid_request.vendedor_wpp in content.roteiro
 
     def test_headline_contains_location(self, valid_request):
         content = MockAIGenerator().generate(valid_request)
@@ -264,7 +259,6 @@ class TestTruckAdService:
         response = service.create_and_publish_truck_ad(valid_request)
         assert len(response.ad_copy) > 0
         assert len(response.headline) > 0
-        assert len(response.roteiro) > 0
 
     def test_response_cidade_concatenated(self, service, valid_request):
         response = service.create_and_publish_truck_ad(valid_request)

@@ -74,7 +74,6 @@ class AIGeneratedContent(BaseModel):
 
     ad_copy: str = Field(alias="copy")
     headline: str
-    roteiro: str
 
 
 class TruckAdPublishResponse(BaseModel):
@@ -97,7 +96,6 @@ class TruckAdPublishResponse(BaseModel):
     # Conteúdo gerado pela IA
     ad_copy: str = Field(alias="copy")
     headline: str
-    roteiro: str
 
     # Configuração
     budget: float

@@ -31,13 +31,7 @@ class MockAIGenerator(AIGeneratorService):
             f"Fale com {request.vendedor_nome} e feche negócio hoje."
         )
         headline = f"{request.modelo} {request.ano} — {request.cor} | {local}"
-        roteiro = (
-            f"[ABERTURA] Imagem em movimento do {request.modelo} na estrada.\n"
-            f"[TEXTO] {copy}\n"
-            f"[CTA] Fale com {request.vendedor_nome} no WhatsApp!\n"
-            f"[LINK] wa.me/{request.vendedor_wpp}"
-        )
-        return AIGeneratedContent(copy=copy, headline=headline, roteiro=roteiro)
+        return AIGeneratedContent(copy=copy, headline=headline)
 
 
 class ClaudeAIGenerator(AIGeneratorService):
@@ -59,7 +53,6 @@ class ClaudeAIGenerator(AIGeneratorService):
         "Use emojis de caminhão com moderação. "
         "O copy deve ter no máximo 150 caracteres. "
         "O headline deve ter no máximo 60 caracteres. "
-        "O roteiro deve descrever um vídeo curto de 15-30 segundos ou um carrossel. "
         "Retorne SOMENTE um objeto JSON válido, sem markdown, sem explicações extras."
     )
 
@@ -113,7 +106,7 @@ class ClaudeAIGenerator(AIGeneratorService):
             f"WhatsApp: {r.vendedor_wpp}\n"
             f"Localização: {r.cidade}, {r.estado}\n\n"
             'Retorne exatamente este JSON:\n'
-            '{"copy": "...", "headline": "...", "roteiro": "..."}'
+            '{"copy": "...", "headline": "..."}'
         )
 
     @staticmethod

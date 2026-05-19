@@ -102,7 +102,7 @@ class TestPublishTruckAd:
     def test_response_has_required_fields(self, client, valid_payload):
         body = client.post("/ads/truck/", json=valid_payload).json()
         for field in ("id", "campaign_id", "status", "modelo", "cor", "ano",
-                      "cidade", "copy", "headline", "roteiro", "budget", "created"):
+                      "cidade", "copy", "headline", "budget", "created"):
             assert field in body, f"Missing field: {field}"
 
     def test_status_is_rascunho(self, client, valid_payload):
