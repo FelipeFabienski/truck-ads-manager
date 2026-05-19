@@ -89,7 +89,19 @@ def create_app(title: str = "Truck Ads Manager API") -> FastAPI:
 
     @app.get("/version", include_in_schema=False)
     def version() -> dict:
-        return {"etapa": 3, "commit": "8a6b57b"}
+        return {"etapa": 3, "commit": "2f5e848"}
+
+    @app.get("/debug/tables", include_in_schema=False)
+    def debug_tables() -> dict:
+        from sqlalchemy import text
+        from db.database import engine
+        with engine.connect() as conn:
+            rows = conn.execute(text(
+                "SELECT table_name FROM information_schema.tables "
+                "WHERE table_schema = 'public' ORDER BY table_name"
+            )).fetchall()
+            db_name = conn.execute(text("SELECT current_database()")).scalar()
+        return {"database": db_name, "tables": [r[0] for r in rows]}
 
     # ── Frontend ──────────────────────────────────────────────────────────────
     @app.get("/", include_in_schema=False)
