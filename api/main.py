@@ -26,28 +26,24 @@ async def lifespan(app: FastAPI):
     logger = logging.getLogger(__name__)
 
     if engine.dialect.name == "postgresql":
-        # Reliable fallback: create any missing tables from current model definitions.
+        # Run Alembic migrations first
+        try:
+            from alembic import command as alembic_command
+            from alembic.config import Config
+
+            alembic_cfg = Config(str(_ROOT / "alembic.ini"))
+            alembic_command.upgrade(alembic_cfg, "head")
+            logger.info("alembic upgrade head: migrations applied")
+        except Exception as exc:
+            logger.warning("alembic upgrade failed: %s", exc)
+
+        # Fallback: create any missing tables from current model definitions.
         # This is idempotent — existing tables are untouched.
         try:
             Base.metadata.create_all(engine)
             logger.info("create_all: all tables ensured")
         except Exception as exc:
             logger.warning("create_all failed: %s", exc)
-
-        # If alembic_version has no row (upgrade head failed silently), stamp to
-        # head so the next startup upgrade is a fast no-op instead of re-running.
-        try:
-            from alembic import command as alembic_command
-            from alembic.config import Config
-            from alembic.runtime.migration import MigrationContext
-
-            with engine.connect() as conn:
-                if MigrationContext.configure(conn).get_current_revision() is None:
-                    alembic_cfg = Config(str(_ROOT / "alembic.ini"))
-                    alembic_command.stamp(alembic_cfg, "head")
-                    logger.info("alembic stamped to head after create_all")
-        except Exception as exc:
-            logger.warning("alembic stamp skipped: %s", exc)
 
     yield
 
