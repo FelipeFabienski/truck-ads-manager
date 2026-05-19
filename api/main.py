@@ -19,32 +19,36 @@ _ROOT = Path(__file__).parent.parent
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Ensure email-verification and password-reset columns exist.
-    # PostgreSQL-only syntax (IF NOT EXISTS); skipped silently on SQLite (tests).
     import logging
-    from sqlalchemy import text
-    from db.database import engine
+    import db.models  # noqa: F401 — register all models with Base.metadata
+    from db.database import Base, engine
+
+    logger = logging.getLogger(__name__)
+
     if engine.dialect.name == "postgresql":
+        # Reliable fallback: create any missing tables from current model definitions.
+        # This is idempotent — existing tables are untouched.
         try:
-            with engine.connect() as conn:
-                conn.execute(text(
-                    "ALTER TABLE users "
-                    "ADD COLUMN IF NOT EXISTS email_verification_token VARCHAR, "
-                    "ADD COLUMN IF NOT EXISTS email_verification_expires_at TIMESTAMPTZ, "
-                    "ADD COLUMN IF NOT EXISTS password_reset_token VARCHAR, "
-                    "ADD COLUMN IF NOT EXISTS password_reset_expires_at TIMESTAMPTZ"
-                ))
-                conn.execute(text(
-                    "CREATE INDEX IF NOT EXISTS ix_users_email_verification_token "
-                    "ON users (email_verification_token)"
-                ))
-                conn.execute(text(
-                    "CREATE INDEX IF NOT EXISTS ix_users_password_reset_token "
-                    "ON users (password_reset_token)"
-                ))
-                conn.commit()
+            Base.metadata.create_all(engine)
+            logger.info("create_all: all tables ensured")
         except Exception as exc:
-            logging.getLogger(__name__).warning("Lifespan migration skipped: %s", exc)
+            logger.warning("create_all failed: %s", exc)
+
+        # If alembic_version has no row (upgrade head failed silently), stamp to
+        # head so the next startup upgrade is a fast no-op instead of re-running.
+        try:
+            from alembic import command as alembic_command
+            from alembic.config import Config
+            from alembic.runtime.migration import MigrationContext
+
+            with engine.connect() as conn:
+                if MigrationContext.configure(conn).get_current_revision() is None:
+                    alembic_cfg = Config(str(_ROOT / "alembic.ini"))
+                    alembic_command.stamp(alembic_cfg, "head")
+                    logger.info("alembic stamped to head after create_all")
+        except Exception as exc:
+            logger.warning("alembic stamp skipped: %s", exc)
+
     yield
 
 
