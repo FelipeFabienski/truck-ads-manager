@@ -21,31 +21,36 @@ _ROOT = Path(__file__).parent.parent
 async def lifespan(app: FastAPI):
     import logging
     import db.models  # noqa: F401 — register all models with Base.metadata
+    from alembic import command as alembic_command
+    from alembic.config import Config
+    from alembic.runtime.migration import MigrationContext
     from db.database import Base, engine
 
     logger = logging.getLogger(__name__)
 
     if engine.dialect.name == "postgresql":
-        # Reliable fallback: create any missing tables from current model definitions.
-        # This is idempotent — existing tables are untouched.
+        alembic_cfg = Config(str(_ROOT / "alembic.ini"))
+
+        # 1. Run Alembic migrations (handles schema changes on existing tables).
+        try:
+            alembic_command.upgrade(alembic_cfg, "head")
+            logger.info("alembic upgrade head: OK")
+        except Exception as exc:
+            logger.warning("alembic upgrade head failed: %s", exc)
+
+        # 2. Fallback: create any tables still missing from current model definitions.
         try:
             Base.metadata.create_all(engine)
-            logger.info("create_all: all tables ensured")
+            logger.info("create_all: tables ensured")
         except Exception as exc:
             logger.warning("create_all failed: %s", exc)
 
-        # If alembic_version has no row (upgrade head failed silently), stamp to
-        # head so the next startup upgrade is a fast no-op instead of re-running.
+        # 3. If alembic_version is empty, stamp to head so future runs are no-ops.
         try:
-            from alembic import command as alembic_command
-            from alembic.config import Config
-            from alembic.runtime.migration import MigrationContext
-
             with engine.connect() as conn:
                 if MigrationContext.configure(conn).get_current_revision() is None:
-                    alembic_cfg = Config(str(_ROOT / "alembic.ini"))
                     alembic_command.stamp(alembic_cfg, "head")
-                    logger.info("alembic stamped to head after create_all")
+                    logger.info("alembic stamped to head")
         except Exception as exc:
             logger.warning("alembic stamp skipped: %s", exc)
 
