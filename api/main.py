@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
 from auth.routes import router as auth_router
+from meta.routes import router as meta_router
 
 from .error_handlers import register_error_handlers
 from .routers import truck_router
@@ -80,6 +81,7 @@ def create_app(title: str = "Truck Ads Manager API") -> FastAPI:
 
     # ── Routers ───────────────────────────────────────────────────────────────
     app.include_router(auth_router)
+    app.include_router(meta_router)
     app.include_router(truck_router, prefix="/ads/truck", tags=["Truck Ads"])
 
     # ── Health check ──────────────────────────────────────────────────────────
