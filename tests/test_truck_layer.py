@@ -18,6 +18,7 @@ from ads.truck.adapter import (
     translate_status_to_pt,
 )
 from ads.truck.ai_generator import MockAIGenerator
+from ads.truck.template_generator import TemplateAdGenerator
 from ads.truck.schemas import TruckAdCreateRequest
 from ads.truck.service import TruckAdService
 
@@ -154,6 +155,50 @@ class TestMockAIGenerator:
     def test_headline_contains_location(self, valid_request):
         content = MockAIGenerator().generate(valid_request)
         assert "Curitiba" in content.headline or "PR" in content.headline
+
+
+# ── TemplateAdGenerator ────────────────────────────────────────────────────────
+
+class TestTemplateAdGenerator:
+    def test_copy_contains_modelo_ano_cidade(self, valid_request):
+        content = TemplateAdGenerator().generate(valid_request)
+        assert "Volvo FH 540" in content.ad_copy
+        assert "2023" in content.ad_copy
+        assert "Curitiba" in content.ad_copy
+
+    def test_copy_contains_preco_when_provided(self, valid_request):
+        content = TemplateAdGenerator().generate(valid_request)
+        assert "380.000" in content.ad_copy
+
+    def test_copy_omits_preco_when_absent(self, valid_request):
+        valid_request.preco = None
+        content = TemplateAdGenerator().generate(valid_request)
+        assert "R$" not in content.ad_copy
+
+    def test_copy_omits_km_when_absent(self, valid_request):
+        valid_request.km = None
+        content = TemplateAdGenerator().generate(valid_request)
+        assert " km" not in content.ad_copy
+
+    def test_headline_contains_modelo_and_ano(self, valid_request):
+        content = TemplateAdGenerator().generate(valid_request)
+        assert "Volvo FH 540" in content.headline
+        assert "2023" in content.headline
+
+    def test_headline_is_short(self, valid_request):
+        content = TemplateAdGenerator().generate(valid_request)
+        assert len(content.headline) <= 80
+
+    def test_works_without_anthropic_api_key(self, valid_request, monkeypatch):
+        monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+        content = TemplateAdGenerator().generate(valid_request)
+        assert content.copy
+        assert content.headline
+
+    def test_generate_returns_ai_generated_content(self, valid_request):
+        from ads.truck.schemas import AIGeneratedContent
+        content = TemplateAdGenerator().generate(valid_request)
+        assert isinstance(content, AIGeneratedContent)
 
 
 # ── Adapter ────────────────────────────────────────────────────────────────────

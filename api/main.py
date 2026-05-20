@@ -61,7 +61,7 @@ def create_app(title: str = "Truck Ads Manager API") -> FastAPI:
     app = FastAPI(
         title=title,
         version="2.0.0",
-        description="API de gestão de campanhas de anúncios de caminhões (Meta Ads + PostgreSQL)",
+        description="SaaS para vendedores e lojas de caminhões criarem, publicarem e gerenciarem campanhas no Meta Ads usando credenciais Meta próprias de cada cliente.",
         lifespan=lifespan,
     )
 

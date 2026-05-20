@@ -141,6 +141,19 @@ class TestPublishTruckAd:
         r = client.post("/ads/truck/", json=valid_payload)
         assert r.status_code == 422
 
+    def test_enable_ai_copy_false_uses_template(self, client, valid_payload, monkeypatch):
+        monkeypatch.setenv("ENABLE_AI_COPY", "false")
+        monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+        body = client.post("/ads/truck/", json=valid_payload).json()
+        assert body["status"] == "rascunho"
+        assert len(body["copy"]) > 0
+
+    def test_system_works_without_anthropic_key(self, client, valid_payload, monkeypatch):
+        monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+        monkeypatch.delenv("ENABLE_AI_COPY", raising=False)
+        r = client.post("/ads/truck/", json=valid_payload)
+        assert r.status_code == 201
+
     def test_missing_required_field_returns_422(self, client, valid_payload):
         del valid_payload["modelo"]
         r = client.post("/ads/truck/", json=valid_payload)
