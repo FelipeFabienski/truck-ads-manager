@@ -58,3 +58,17 @@ class ErrorResponse(BaseModel):
 class HealthResponse(BaseModel):
     status: str = "ok"
     provider: str
+
+
+class PublishCampaignRequest(BaseModel):
+    meta_credential_id: int = Field(..., description="ID da credencial Meta do usuário")
+
+
+class PublishCampaignResponse(BaseModel):
+    campaign_id: str
+    meta_campaign_id: str | None
+    meta_adset_id: str | None
+    meta_creative_id: str | None
+    meta_ad_id: str | None
+    meta_status: str
+    status: str

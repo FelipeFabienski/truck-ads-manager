@@ -20,9 +20,16 @@ class MetaAdsProvider(AdsProvider):
         META_PAGE_ID        — Facebook Page ID linked to the ad account
     """
 
-    def __init__(self, access_token: str, ad_account_id: str) -> None:
+    def __init__(
+        self,
+        access_token: str,
+        ad_account_id: str,
+        page_id: str = "",
+        instagram_actor_id: str | None = None,
+    ) -> None:
         self._client = MetaAPIClient(access_token=access_token, ad_account_id=ad_account_id)
-        self._page_id: str = os.getenv(_PAGE_ID_ENV, "")
+        self._page_id: str = page_id or os.getenv(_PAGE_ID_ENV, "")
+        self._instagram_actor_id = instagram_actor_id
 
     # ── Campanhas ──────────────────────────────────────────────────────────────
 

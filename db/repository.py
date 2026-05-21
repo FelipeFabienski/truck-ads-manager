@@ -33,6 +33,30 @@ class CampaignRepository:
         self.db.delete(record)
         self.db.commit()
 
+    def update_publish_result(
+        self,
+        record: CampaignModel,
+        meta_credential_id: int,
+        meta_campaign_id: str | None,
+        meta_adset_id: str | None,
+        meta_creative_id: str | None,
+        meta_ad_id: str | None,
+        meta_status: str,
+    ) -> CampaignModel:
+        from datetime import datetime, timezone
+
+        record.meta_credential_id = meta_credential_id
+        record.meta_campaign_id = meta_campaign_id
+        record.meta_adset_id = meta_adset_id
+        record.meta_creative_id = meta_creative_id
+        record.meta_ad_id = meta_ad_id
+        record.meta_status = meta_status
+        record.status = "pausado"
+        record.published_at = datetime.now(timezone.utc)
+        self.db.commit()
+        self.db.refresh(record)
+        return record
+
     # ── Read ──────────────────────────────────────────────────────────────────
 
     def get_all(

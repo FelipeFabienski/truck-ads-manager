@@ -417,3 +417,56 @@ class TruckAdService:
         except Exception as exc:
             logger.warning("Metrics unavailable for campaign %s: %s", campaign_id, exc)
             return {}
+
+
+# ── Module-level helper (used by the publish endpoint) ────────────────────────
+
+def build_meta_payload_from_record(record: "CampaignModel") -> dict:
+    """Reconstruct a Meta Ads publish payload from a stored CampaignModel."""
+    td: dict[str, Any] = record.targeting_data or {}
+
+    interesses_raw = td.get("interesses", "")
+    if isinstance(interesses_raw, str):
+        interests = [i.strip() for i in interesses_raw.split(",") if i.strip()]
+    else:
+        interests = list(interesses_raw) if interesses_raw else []
+
+    placements = td.get("posicionamentos") or ["feed"]
+    wpp = td.get("vendedor_wpp", "")
+
+    km_part = f", com {record.km} km" if record.km else ""
+    preco_part = f", por R$ {record.preco}" if record.preco else ""
+    copy = (
+        f"{record.modelo} {record.ano} à venda em {record.cidade}. "
+        f"Caminhão na cor {record.cor}{km_part}{preco_part}. "
+        f"Entre em contato pelo WhatsApp e saiba mais."
+    )
+    headline = f"{record.modelo} {record.ano} em oferta"
+
+    return {
+        "campaign": {
+            "name": f"{record.modelo} {record.ano} — {record.cidade}",
+            "objective": "OUTCOME_LEADS",
+            "budget": record.budget,
+        },
+        "adset": {
+            "name": f"Público {record.cidade}",
+            "budget": record.budget,
+            "placements": placements,
+            "audience": {
+                "age_min": td.get("idade_min", 18),
+                "age_max": td.get("idade_max", 65),
+                "interests": interests,
+                "gender": td.get("genero", "all"),
+                "radius_km": td.get("raio", 50),
+            },
+        },
+        "ad": {
+            "name": f"Ad — {record.modelo} {record.ano}",
+            "copy": copy,
+            "headline": headline,
+            "destination": f"https://wa.me/{wpp}" if wpp else "",
+            "image_hash": record.image_hash,
+            "creative": {"type": "image", "url": "", "caption": ""},
+        },
+    }

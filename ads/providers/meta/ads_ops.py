@@ -24,5 +24,6 @@ def create_ad(client: MetaAPIClient, data: dict, page_id: str) -> dict:
         "id": result["id"],
         "campaign_id": data.get("campaign_id", ""),
         "adset_id": data["adset_id"],
+        "creative_id": creative["id"],
         "meta_id": result["id"],
     }

@@ -1,17 +1,28 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from sqlalchemy.orm import Session
 
 from ads.exceptions import AdsError
+from ads.providers.meta.exceptions import MetaAPIError
+from ads.providers.meta.provider import MetaAdsProvider
 from ads.truck.adapter import translate_status_to_en
 from ads.truck.schemas import TruckAdCreateRequest, TruckAdPublishResponse
-from ads.truck.service import TruckAdService
+from ads.truck.service import TruckAdService, build_meta_payload_from_record
+from auth.crypto import decrypt
+from auth.dependencies import get_current_user
+from db.database import get_db
+from db.models.user import User
+from db.repository import CampaignRepository
+from meta.repository import MetaCredentialRepository
 
 from ..dependencies import get_truck_service
 from ..schemas import (
     CampaignListItem,
     DeleteResponse,
     MetricsResponse,
+    PublishCampaignRequest,
+    PublishCampaignResponse,
     StatusUpdateResponse,
 )
 
@@ -141,6 +152,81 @@ def delete_campaign(
     service: TruckAdService = Depends(get_truck_service),
 ) -> dict:
     return service.delete_campaign(campaign_id)
+
+
+@router.post(
+    "/{campaign_id}/publish",
+    response_model=PublishCampaignResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Publicar campanha na Meta Ads API",
+    responses={
+        200: {"description": "Campanha publicada como PAUSED na Meta Ads"},
+        404: {"description": "Campanha ou credencial não encontrada"},
+        400: {"description": "Erro da Meta Ads API"},
+    },
+)
+def publish_campaign_to_meta(
+    campaign_id: str,
+    body: PublishCampaignRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    campaign_repo = CampaignRepository(db, user_id=current_user.id)
+    record = campaign_repo.get_by_id(campaign_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail="Campanha não encontrada")
+
+    cred_repo = MetaCredentialRepository(db, user_id=current_user.id)
+    credential = cred_repo.get_by_id(body.meta_credential_id)
+    if credential is None:
+        raise HTTPException(status_code=404, detail="Credencial não encontrada")
+
+    try:
+        access_token = decrypt(credential.access_token_enc)
+    except Exception:
+        raise HTTPException(status_code=500, detail="Erro ao descriptografar token da credencial")
+
+    provider = MetaAdsProvider(
+        access_token=access_token,
+        ad_account_id=credential.ad_account_id,
+        page_id=credential.page_id or "",
+        instagram_actor_id=credential.instagram_actor_id,
+    )
+
+    payload = build_meta_payload_from_record(record)
+
+    try:
+        result = provider.publish_ad(payload)
+    except MetaAPIError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Erro ao publicar campanha: {exc}") from exc
+
+    meta_campaign_id = result.get("campaign", {}).get("id")
+    meta_adset_id = result.get("adset", {}).get("id")
+    ad_result = result.get("ad", {})
+    meta_ad_id = ad_result.get("id")
+    meta_creative_id = ad_result.get("creative_id")
+
+    campaign_repo.update_publish_result(
+        record,
+        meta_credential_id=credential.id,
+        meta_campaign_id=meta_campaign_id,
+        meta_adset_id=meta_adset_id,
+        meta_creative_id=meta_creative_id,
+        meta_ad_id=meta_ad_id,
+        meta_status="PAUSED",
+    )
+
+    return {
+        "campaign_id": campaign_id,
+        "meta_campaign_id": meta_campaign_id,
+        "meta_adset_id": meta_adset_id,
+        "meta_creative_id": meta_creative_id,
+        "meta_ad_id": meta_ad_id,
+        "meta_status": "PAUSED",
+        "status": "pausado",
+    }
 
 
 @router.get(

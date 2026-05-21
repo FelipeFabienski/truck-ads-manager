@@ -34,6 +34,19 @@ class CampaignModel(Base):
 
     targeting_data: Mapped[dict[str, Any] | None] = mapped_column(JSON)
 
+    # ── Meta Ads publishing ───────────────────────────────────────────────────
+    meta_credential_id: Mapped[int | None] = mapped_column(
+        ForeignKey("meta_credentials.id", ondelete="SET NULL"), nullable=True
+    )
+    meta_campaign_id: Mapped[str | None] = mapped_column(nullable=True)
+    meta_adset_id: Mapped[str | None] = mapped_column(nullable=True)
+    meta_creative_id: Mapped[str | None] = mapped_column(nullable=True)
+    meta_ad_id: Mapped[str | None] = mapped_column(nullable=True)
+    meta_status: Mapped[str | None] = mapped_column(nullable=True)
+    published_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
