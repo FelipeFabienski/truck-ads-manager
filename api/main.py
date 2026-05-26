@@ -91,7 +91,7 @@ def create_app(title: str = "Truck Ads Manager API") -> FastAPI:
 
     @app.get("/version", include_in_schema=False)
     def version() -> dict:
-        return {"etapa": 3, "commit": "2f5e848"}
+        return {"etapa": 3, "commit": "f52b90c"}
 
 
 
