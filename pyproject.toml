@@ -1,0 +1,12 @@
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = [
+    "S101",    # assert is pytest's assertion mechanism
+    "PLR2004", # magic values are acceptable in test assertions
+    "S105",    # patch path strings are not passwords
+    "INP001",  # pytest layout without __init__.py
+    "ANN",     # type annotations not required in test helpers
+    "D",       # docstrings not required in tests
+]

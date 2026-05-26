@@ -1,16 +1,18 @@
-"""
-Tests for POST /ads/truck/{campaign_id}/publish endpoint.
+"""Tests for POST /ads/truck/{campaign_id}/publish endpoint.
 
 Meta Ads API calls are always mocked — no real HTTP requests are made.
 """
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from unittest.mock import patch
 
-from fastapi.testclient import TestClient
-from sqlalchemy.orm import Session
+if TYPE_CHECKING:
+    from fastapi.testclient import TestClient
+    from sqlalchemy.orm import Session
 
+from ads.providers.meta.exceptions import MetaAPIError
+from ads.truck.service import build_meta_payload_from_record
 from db.models.campaign import CampaignModel
 from db.models.user import User
 
@@ -71,7 +73,10 @@ def _register_and_login(
     email: str = "user@example.com",
     name: str = "Test User",
 ) -> str:
-    client.post("/auth/register", json={"name": name, "email": email, "password": "Senha1234"})
+    client.post(
+        "/auth/register",
+        json={"name": name, "email": email, "password": "Senha1234"},
+    )
     user = test_db.query(User).filter_by(email=email).first()
     assert user is not None
     client.get(f"/auth/verify-email?token={user.email_verification_token}")
@@ -80,7 +85,7 @@ def _register_and_login(
     return r.json()["access_token"]
 
 
-def _auth(token: str) -> dict:
+def _auth(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
@@ -111,18 +116,16 @@ def _publish(
     campaign_id: str,
     cred_id: int,
     *,
-    mock_result: dict | None = None,
+    mock_result: dict[str, Any] | None = None,
 ) -> Any:
     result = mock_result or _MOCK_PUBLISH_RESULT
-    with patch(_PATCH_PROVIDER) as MockProvider:
-        instance = MockProvider.return_value
-        instance.publish_ad.return_value = result
-        r = client.post(
+    with patch(_PATCH_PROVIDER) as mock_provider:
+        mock_provider.return_value.publish_ad.return_value = result
+        return client.post(
             f"/ads/truck/{campaign_id}/publish",
             json={"meta_credential_id": cred_id},
             headers=_auth(token),
         )
-    return r
 
 
 # ── Tests: happy path ──────────────────────────────────────────────────────────
@@ -141,7 +144,10 @@ def test_publish_success(auth_client: TestClient, test_db: Session) -> None:
     assert data["status"] == "pausado"
 
 
-def test_publish_saves_meta_campaign_id(auth_client: TestClient, test_db: Session) -> None:
+def test_publish_saves_meta_campaign_id(
+    auth_client: TestClient,
+    test_db: Session,
+) -> None:
     token = _register_and_login(auth_client, test_db)
     cred_id = _create_credential(auth_client, token)
     campaign_id = _create_campaign(auth_client, token)
@@ -163,10 +169,14 @@ def test_publish_saves_meta_adset_id(auth_client: TestClient, test_db: Session) 
 
     test_db.expire_all()
     record = test_db.query(CampaignModel).filter_by(campaign_id=campaign_id).first()
+    assert record is not None
     assert record.meta_adset_id == "adset_444555666"
 
 
-def test_publish_saves_meta_creative_id(auth_client: TestClient, test_db: Session) -> None:
+def test_publish_saves_meta_creative_id(
+    auth_client: TestClient,
+    test_db: Session,
+) -> None:
     token = _register_and_login(auth_client, test_db)
     cred_id = _create_credential(auth_client, token)
     campaign_id = _create_campaign(auth_client, token)
@@ -175,6 +185,7 @@ def test_publish_saves_meta_creative_id(auth_client: TestClient, test_db: Sessio
 
     test_db.expire_all()
     record = test_db.query(CampaignModel).filter_by(campaign_id=campaign_id).first()
+    assert record is not None
     assert record.meta_creative_id == "creative_000111222"
 
 
@@ -187,10 +198,14 @@ def test_publish_saves_meta_ad_id(auth_client: TestClient, test_db: Session) -> 
 
     test_db.expire_all()
     record = test_db.query(CampaignModel).filter_by(campaign_id=campaign_id).first()
+    assert record is not None
     assert record.meta_ad_id == "ad_777888999"
 
 
-def test_publish_status_becomes_pausado(auth_client: TestClient, test_db: Session) -> None:
+def test_publish_status_becomes_pausado(
+    auth_client: TestClient,
+    test_db: Session,
+) -> None:
     token = _register_and_login(auth_client, test_db)
     cred_id = _create_credential(auth_client, token)
     campaign_id = _create_campaign(auth_client, token)
@@ -199,6 +214,7 @@ def test_publish_status_becomes_pausado(auth_client: TestClient, test_db: Sessio
 
     test_db.expire_all()
     record = test_db.query(CampaignModel).filter_by(campaign_id=campaign_id).first()
+    assert record is not None
     assert record.status == "pausado"
     assert record.meta_status == "PAUSED"
 
@@ -216,6 +232,7 @@ def test_publish_never_active(auth_client: TestClient, test_db: Session) -> None
 
     test_db.expire_all()
     record = test_db.query(CampaignModel).filter_by(campaign_id=campaign_id).first()
+    assert record is not None
     assert record.meta_status != "ACTIVE"
     assert record.status != "ativo"
 
@@ -229,10 +246,14 @@ def test_publish_saves_published_at(auth_client: TestClient, test_db: Session) -
 
     test_db.expire_all()
     record = test_db.query(CampaignModel).filter_by(campaign_id=campaign_id).first()
+    assert record is not None
     assert record.published_at is not None
 
 
-def test_publish_saves_meta_credential_id(auth_client: TestClient, test_db: Session) -> None:
+def test_publish_saves_meta_credential_id(
+    auth_client: TestClient,
+    test_db: Session,
+) -> None:
     token = _register_and_login(auth_client, test_db)
     cred_id = _create_credential(auth_client, token)
     campaign_id = _create_campaign(auth_client, token)
@@ -241,26 +262,28 @@ def test_publish_saves_meta_credential_id(auth_client: TestClient, test_db: Sess
 
     test_db.expire_all()
     record = test_db.query(CampaignModel).filter_by(campaign_id=campaign_id).first()
+    assert record is not None
     assert record.meta_credential_id == cred_id
 
 
 def test_publish_creates_provider_with_credential_data(
-    auth_client: TestClient, test_db: Session
+    auth_client: TestClient,
+    test_db: Session,
 ) -> None:
-    """MetaAdsProvider must be instantiated with the credential's access_token and ad_account_id."""
+    """Verify MetaAdsProvider is constructed with access_token and ad_account_id."""
     token = _register_and_login(auth_client, test_db)
     cred_id = _create_credential(auth_client, token)
     campaign_id = _create_campaign(auth_client, token)
 
-    with patch(_PATCH_PROVIDER) as MockProvider:
-        instance = MockProvider.return_value
+    with patch(_PATCH_PROVIDER) as mock_provider:
+        instance = mock_provider.return_value
         instance.publish_ad.return_value = _MOCK_PUBLISH_RESULT
         auth_client.post(
             f"/ads/truck/{campaign_id}/publish",
             json={"meta_credential_id": cred_id},
             headers=_auth(token),
         )
-        call_kwargs = MockProvider.call_args
+        call_kwargs = mock_provider.call_args
     assert call_kwargs is not None
     assert call_kwargs.kwargs.get("ad_account_id") == "act_123456789"
     assert call_kwargs.kwargs.get("page_id") == "999999999"
@@ -315,7 +338,10 @@ def test_publish_campaign_not_found(auth_client: TestClient, test_db: Session) -
     assert r.status_code == 404
 
 
-def test_publish_credential_not_found(auth_client: TestClient, test_db: Session) -> None:
+def test_publish_credential_not_found(
+    auth_client: TestClient,
+    test_db: Session,
+) -> None:
     token = _register_and_login(auth_client, test_db)
     campaign_id = _create_campaign(auth_client, token)
 
@@ -326,15 +352,16 @@ def test_publish_credential_not_found(auth_client: TestClient, test_db: Session)
 # ── Tests: Meta API error handling ────────────────────────────────────────────
 
 
-def test_publish_meta_api_error_returns_400(auth_client: TestClient, test_db: Session) -> None:
-    from ads.providers.meta.exceptions import MetaAPIError
-
+def test_publish_meta_api_error_returns_400(
+    auth_client: TestClient,
+    test_db: Session,
+) -> None:
     token = _register_and_login(auth_client, test_db)
     cred_id = _create_credential(auth_client, token)
     campaign_id = _create_campaign(auth_client, token)
 
-    with patch(_PATCH_PROVIDER) as MockProvider:
-        instance = MockProvider.return_value
+    with patch(_PATCH_PROVIDER) as mock_provider:
+        instance = mock_provider.return_value
         instance.publish_ad.side_effect = MetaAPIError("Invalid ad account", code=100)
         r = auth_client.post(
             f"/ads/truck/{campaign_id}/publish",
@@ -345,16 +372,17 @@ def test_publish_meta_api_error_returns_400(auth_client: TestClient, test_db: Se
     assert r.status_code == 400
 
 
-def test_publish_meta_error_does_not_update_db(auth_client: TestClient, test_db: Session) -> None:
+def test_publish_meta_error_does_not_update_db(
+    auth_client: TestClient,
+    test_db: Session,
+) -> None:
     """When Meta API fails, DB record must remain unchanged."""
-    from ads.providers.meta.exceptions import MetaAPIError
-
     token = _register_and_login(auth_client, test_db)
     cred_id = _create_credential(auth_client, token)
     campaign_id = _create_campaign(auth_client, token)
 
-    with patch(_PATCH_PROVIDER) as MockProvider:
-        instance = MockProvider.return_value
+    with patch(_PATCH_PROVIDER) as mock_provider:
+        instance = mock_provider.return_value
         instance.publish_ad.side_effect = MetaAPIError("Forbidden", code=200)
         auth_client.post(
             f"/ads/truck/{campaign_id}/publish",
@@ -364,6 +392,7 @@ def test_publish_meta_error_does_not_update_db(auth_client: TestClient, test_db:
 
     test_db.expire_all()
     record = test_db.query(CampaignModel).filter_by(campaign_id=campaign_id).first()
+    assert record is not None
     assert record.meta_campaign_id is None
     assert record.status == "rascunho"
 
@@ -371,7 +400,10 @@ def test_publish_meta_error_does_not_update_db(auth_client: TestClient, test_db:
 # ── Tests: security ────────────────────────────────────────────────────────────
 
 
-def test_publish_response_has_no_access_token(auth_client: TestClient, test_db: Session) -> None:
+def test_publish_response_has_no_access_token(
+    auth_client: TestClient,
+    test_db: Session,
+) -> None:
     """access_token must never appear in the publish response."""
     token = _register_and_login(auth_client, test_db)
     cred_id = _create_credential(auth_client, token)
@@ -386,11 +418,10 @@ def test_publish_response_has_no_access_token(auth_client: TestClient, test_db: 
 
 
 def test_build_meta_payload_from_record_structure(
-    auth_client: TestClient, test_db: Session
+    auth_client: TestClient,
+    test_db: Session,
 ) -> None:
     """Verify the payload builder produces the expected structure."""
-    from ads.truck.service import build_meta_payload_from_record
-
     token = _register_and_login(auth_client, test_db)
     _create_campaign(auth_client, token)
 
