@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from sqlalchemy.orm import Session
 
 from db.models.meta_credential import MetaCredential
@@ -43,6 +45,23 @@ class MetaCredentialRepository:
     def delete(self, record: MetaCredential) -> None:
         self.db.delete(record)
         self.db.commit()
+
+    def mark_validated(self, credential_id: int) -> MetaCredential:
+        """Mark a credential as valid and record the validation timestamp."""
+        record = self._base_query().filter(MetaCredential.id == credential_id).first()
+        assert record is not None
+        record.is_valid = True
+        record.last_validated_at = datetime.now(timezone.utc)
+        self.db.commit()
+        self.db.refresh(record)
+        return record
+
+    def mark_invalid(self, credential_id: int) -> None:
+        """Mark a credential as invalid (e.g. after a failed validation)."""
+        record = self._base_query().filter(MetaCredential.id == credential_id).first()
+        if record:
+            record.is_valid = False
+            self.db.commit()
 
     def set_active(self, credential_id: int) -> MetaCredential:
         """Deactivate all credentials for this user, then activate the specified one."""

@@ -23,6 +23,10 @@ class MetaCredential(Base):
     whatsapp_phone_number: Mapped[str | None] = mapped_column(String(), nullable=True)
     whatsapp_business_account_id: Mapped[str | None] = mapped_column(String(), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean(), default=False, nullable=False)
+    is_valid: Mapped[bool] = mapped_column(Boolean(), default=False, nullable=False)
+    last_validated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),

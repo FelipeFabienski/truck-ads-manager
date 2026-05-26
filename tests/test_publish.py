@@ -5,9 +5,9 @@ Meta Ads API calls are always mocked — no real HTTP requests are made.
 """
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from typing import Any
+from unittest.mock import patch
 
-import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
@@ -112,7 +112,7 @@ def _publish(
     cred_id: int,
     *,
     mock_result: dict | None = None,
-) -> "TestClient":
+) -> Any:
     result = mock_result or _MOCK_PUBLISH_RESULT
     with patch(_PATCH_PROVIDER) as MockProvider:
         instance = MockProvider.return_value

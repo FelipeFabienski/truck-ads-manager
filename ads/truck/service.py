@@ -392,6 +392,8 @@ class TruckAdService:
             "spend": record.spend or 0.0,
             "created": dt.strftime("%d/%m/%Y"),
             "wpp": td.get("vendedor_wpp", ""),
+            "meta_campaign_id": record.meta_campaign_id,
+            "meta_status": record.meta_status,
         }
 
     def upload_image(self, image_bytes: bytes, filename: str = "image.jpg") -> str:

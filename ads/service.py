@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from .exceptions import AdsError
 from .factory import get_ads_provider
 from .provider import AdsProvider
 

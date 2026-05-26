@@ -168,7 +168,6 @@ class TestStatusTransitions:
         with pytest.raises(InvalidTransition):
             # draft não está em VALID_TRANSITIONS[ACTIVE]
             from ads.models import CampaignStatus as CS
-            from ads.exceptions import InvalidTransition as IT
             provider._transition(
                 provider._campaigns[created_campaign["id"]], CS.DRAFT
             )

@@ -5,9 +5,9 @@ Meta API calls are always mocked — no real HTTP requests are made.
 """
 from __future__ import annotations
 
+from typing import Any
 from unittest.mock import patch
 
-import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
@@ -57,7 +57,7 @@ def _auth_headers(token: str) -> dict:
     return {"Authorization": f"Bearer {token}"}
 
 
-def _create_credential(client: TestClient, token: str, payload: dict | None = None) -> dict:
+def _create_credential(client: TestClient, token: str, payload: dict | None = None) -> Any:
     """POST /meta/credentials with mocked Meta validation. Returns response JSON."""
     body = payload or _VALID_PAYLOAD
     with (
@@ -233,6 +233,7 @@ def test_update_credential_access_token_validates(auth_client: TestClient, test_
     assert r.status_code == 200
 
     cred = test_db.query(MetaCredential).filter_by(id=cred_id).first()
+    assert cred is not None
     assert decrypt(cred.access_token_enc) == new_token
 
 
@@ -319,6 +320,7 @@ def test_set_active(auth_client: TestClient, test_db: Session) -> None:
     test_db.expire_all()
     cred1 = test_db.query(MetaCredential).filter_by(id=id1).first()
     cred2 = test_db.query(MetaCredential).filter_by(id=id2).first()
+    assert cred1 is not None and cred2 is not None
     assert cred1.is_active is True
     assert cred2.is_active is False
 
@@ -332,8 +334,11 @@ def test_set_active_switches_correctly(auth_client: TestClient, test_db: Session
     auth_client.post(f"/meta/credentials/{id2}/set-active", headers=_auth_headers(token))
 
     test_db.expire_all()
-    assert test_db.query(MetaCredential).filter_by(id=id1).first().is_active is False
-    assert test_db.query(MetaCredential).filter_by(id=id2).first().is_active is True
+    c1 = test_db.query(MetaCredential).filter_by(id=id1).first()
+    c2 = test_db.query(MetaCredential).filter_by(id=id2).first()
+    assert c1 is not None and c2 is not None
+    assert c1.is_active is False
+    assert c2.is_active is True
 
 
 def test_set_active_not_found(auth_client: TestClient, test_db: Session) -> None:

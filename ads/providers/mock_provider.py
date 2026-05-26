@@ -4,11 +4,8 @@ import random
 import uuid
 from datetime import datetime, timezone
 
-_now = lambda: datetime.now(timezone.utc)
-
 from ..exceptions import (
     AdSetNotFound,
-    AdsError,
     CampaignNotFound,
     CreationError,
     InvalidAccount,
@@ -16,6 +13,10 @@ from ..exceptions import (
 )
 from ..models import Ad, AdSet, Audience, Campaign, CampaignStatus, Creative, Metrics
 from ..provider import AdsProvider
+
+
+def _now() -> datetime:
+    return datetime.now(timezone.utc)
 
 # Contas reconhecidas pelo mock — qualquer outra levanta InvalidAccount
 _VALID_ACCOUNTS: frozenset[str] = frozenset(

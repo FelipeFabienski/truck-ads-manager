@@ -74,6 +74,8 @@ def create_credential(
             "is_active": False,
         }
     )
+    # Token passed validation above — mark as valid immediately
+    record = repo.mark_validated(record.id)
     return MetaCredentialResponse.model_validate(record)
 
 
@@ -165,12 +167,14 @@ def validate_credential(
         collected["meta_user_id"] = me.get("id")
         collected["meta_user_name"] = me.get("name")
     except MetaTokenError as exc:
+        repo.mark_invalid(credential_id)
         return MetaValidateResponse(valid=False, message=str(exc))
 
     try:
         account = validate_ad_account(access_token, record.ad_account_id)
         collected["ad_account_name"] = account.get("name")
     except MetaTokenError as exc:
+        repo.mark_invalid(credential_id)
         return MetaValidateResponse(valid=False, message=str(exc), **collected)
 
     if record.page_id:
@@ -178,6 +182,8 @@ def validate_credential(
             page = validate_page(access_token, record.page_id)
             collected["page_name"] = page.get("name")
         except MetaTokenError as exc:
+            repo.mark_invalid(credential_id)
             return MetaValidateResponse(valid=False, message=str(exc), **collected)
 
+    repo.mark_validated(credential_id)
     return MetaValidateResponse(valid=True, message="Credencial válida.", **collected)

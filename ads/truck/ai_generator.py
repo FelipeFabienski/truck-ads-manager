@@ -72,8 +72,6 @@ class ClaudeAIGenerator(AIGeneratorService):
         self._model = model
 
     def generate(self, request: TruckAdCreateRequest) -> AIGeneratedContent:
-        import anthropic
-
         message = self._client.messages.create(
             model=self._model,
             max_tokens=512,

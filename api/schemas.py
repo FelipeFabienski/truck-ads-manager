@@ -19,6 +19,8 @@ class CampaignListItem(BaseModel):
     spend: float
     created: str = Field(description="DD/MM/AAAA")
     wpp: str = Field(default="", description="Número WhatsApp do vendedor")
+    meta_campaign_id: str | None = Field(default=None, description="ID da campanha na Meta")
+    meta_status: str | None = Field(default=None, description="Status Meta: PAUSED | ACTIVE")
 
 
 class StatusUpdateResponse(BaseModel):

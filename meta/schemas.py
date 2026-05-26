@@ -36,6 +36,8 @@ class MetaCredentialResponse(BaseModel):
     whatsapp_phone_number: str | None
     whatsapp_business_account_id: str | None
     is_active: bool
+    is_valid: bool
+    last_validated_at: datetime | None
     created_at: datetime
     updated_at: datetime
 
