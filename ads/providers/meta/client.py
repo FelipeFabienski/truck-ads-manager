@@ -60,8 +60,11 @@ class MetaAPIClient:
         timeout: float = _DEFAULT_TIMEOUT,
     ) -> None:
         self._token = access_token
-        self._account_id = ad_account_id
-        self._account_prefix = f"act_{ad_account_id}"
+        _numeric = ad_account_id.strip()
+        while _numeric.startswith("act_"):
+            _numeric = _numeric[4:]
+        self._account_id = _numeric
+        self._account_prefix = f"act_{_numeric}"
         self._client = httpx.Client(
             base_url=_BASE_URL,
             timeout=timeout,

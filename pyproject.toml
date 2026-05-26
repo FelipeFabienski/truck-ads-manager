@@ -1,5 +1,6 @@
 [tool.ruff]
 line-length = 88
+exclude = [".claude"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = [

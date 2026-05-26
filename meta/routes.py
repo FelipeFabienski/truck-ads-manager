@@ -117,7 +117,10 @@ def update_credential(
         update_data["access_token_enc"] = encrypt(new_token)
 
     if "ad_account_id" in update_data:
-        update_data["ad_account_id"] = normalize_ad_account_id(update_data["ad_account_id"])
+        try:
+            update_data["ad_account_id"] = normalize_ad_account_id(update_data["ad_account_id"])
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     record = repo.update(record, update_data)
     return MetaCredentialResponse.model_validate(record)

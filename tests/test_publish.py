@@ -417,6 +417,24 @@ def test_publish_response_has_no_access_token(
     assert _CREDENTIAL_PAYLOAD["access_token"] not in raw
 
 
+def test_publish_already_published_returns_409(
+    auth_client: TestClient,
+    test_db: Session,
+) -> None:
+    """Republishing a campaign that already has a meta_campaign_id must return 409."""
+    token = _register_and_login(auth_client, test_db)
+    cred_id = _create_credential(auth_client, token)
+    campaign_id = _create_campaign(auth_client, token)
+
+    r = _publish(auth_client, token, campaign_id, cred_id)
+    assert r.status_code == 200, r.json()
+
+    r2 = _publish(auth_client, token, campaign_id, cred_id)
+    assert r2.status_code == 409
+    detail = r2.json()["detail"].lower()
+    assert "republicar" in detail or "publicada" in detail
+
+
 def test_build_meta_payload_from_record_structure(
     auth_client: TestClient,
     test_db: Session,

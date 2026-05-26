@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class MetaCredentialCreate(BaseModel):
@@ -14,6 +14,19 @@ class MetaCredentialCreate(BaseModel):
     whatsapp_phone_number: str | None = None
     whatsapp_business_account_id: str | None = None
 
+    @field_validator("ad_account_id")
+    @classmethod
+    def validate_ad_account_id(cls, v: str) -> str:
+        stripped = v.strip()
+        numeric = stripped
+        while numeric.startswith("act_"):
+            numeric = numeric[4:]
+        if not numeric:
+            raise ValueError(
+                "ad_account_id deve conter um ID numérico válido (ex: 123456789 ou act_123456789)"
+            )
+        return stripped
+
 
 class MetaCredentialUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=2)
@@ -23,6 +36,21 @@ class MetaCredentialUpdate(BaseModel):
     instagram_actor_id: str | None = None
     whatsapp_phone_number: str | None = None
     whatsapp_business_account_id: str | None = None
+
+    @field_validator("ad_account_id")
+    @classmethod
+    def validate_ad_account_id(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        stripped = v.strip()
+        numeric = stripped
+        while numeric.startswith("act_"):
+            numeric = numeric[4:]
+        if not numeric:
+            raise ValueError(
+                "ad_account_id deve conter um ID numérico válido (ex: 123456789 ou act_123456789)"
+            )
+        return stripped
 
 
 class MetaCredentialResponse(BaseModel):

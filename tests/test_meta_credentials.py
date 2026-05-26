@@ -445,3 +445,60 @@ def test_access_token_never_in_any_response(auth_client: TestClient, test_db: Se
         assert r.status_code == 200
         assert raw_token not in r.text, f"Token leaked in {method} {url}"
         assert "access_token_enc" not in r.text, f"Encrypted token leaked in {method} {url}"
+
+
+def test_patch_without_token_keeps_existing(
+    auth_client: TestClient, test_db: Session
+) -> None:
+    """PATCH with only a name change must not alter the stored encrypted token."""
+    token = _register_and_login(auth_client, test_db)
+    _create_credential(auth_client, token)
+
+    cred_before = test_db.query(MetaCredential).first()
+    assert cred_before is not None
+    enc_before = cred_before.access_token_enc
+    cred_id = cred_before.id
+
+    r = auth_client.patch(
+        f"/meta/credentials/{cred_id}",
+        json={"name": "Nome Atualizado"},
+        headers=_auth_headers(token),
+    )
+    assert r.status_code == 200
+
+    test_db.expire_all()
+    cred_after = test_db.query(MetaCredential).filter_by(id=cred_id).first()
+    assert cred_after is not None
+    assert cred_after.access_token_enc == enc_before
+
+
+def test_patch_with_new_token_reencrypts(
+    auth_client: TestClient, test_db: Session
+) -> None:
+    """PATCH with a new access_token must update access_token_enc in DB."""
+    token = _register_and_login(auth_client, test_db)
+    _create_credential(auth_client, token)
+
+    cred_before = test_db.query(MetaCredential).first()
+    assert cred_before is not None
+    enc_before = cred_before.access_token_enc
+    cred_id = cred_before.id
+
+    new_token = "EAABnewreplacementtoken12345"
+    with (
+        patch(_PATCH_VALIDATE_META, return_value={"id": "111", "name": "User"}),
+        patch(_PATCH_VALIDATE_ACCOUNT, return_value=_MOCK_ACCOUNT),
+        patch(_PATCH_VALIDATE_PAGE, return_value=_MOCK_PAGE),
+    ):
+        r = auth_client.patch(
+            f"/meta/credentials/{cred_id}",
+            json={"access_token": new_token},
+            headers=_auth_headers(token),
+        )
+    assert r.status_code == 200
+
+    test_db.expire_all()
+    cred_after = test_db.query(MetaCredential).filter_by(id=cred_id).first()
+    assert cred_after is not None
+    assert cred_after.access_token_enc != enc_before
+    assert decrypt(cred_after.access_token_enc) == new_token

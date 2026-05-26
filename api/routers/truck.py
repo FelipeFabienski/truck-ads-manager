@@ -176,6 +176,12 @@ def publish_campaign_to_meta(
     if record is None:
         raise HTTPException(status_code=404, detail="Campanha não encontrada")
 
+    if record.meta_campaign_id is not None:
+        raise HTTPException(
+            status_code=409,
+            detail="Campanha já foi publicada na Meta. Não é possível republicar.",
+        )
+
     cred_repo = MetaCredentialRepository(db, user_id=current_user.id)
     credential = cred_repo.get_by_id(body.meta_credential_id)
     if credential is None:

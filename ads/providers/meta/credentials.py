@@ -20,9 +20,17 @@ class MetaTokenError(Exception):
 
 
 def normalize_ad_account_id(raw: str) -> str:
-    """Ensure the ad account ID is in act_<numeric_id> format."""
+    """Ensure the ad account ID is in act_<numeric_id> format.
+
+    Accepts "123456789" or "act_123456789" — never produces "act_act_...".
+    """
     stripped = raw.strip()
-    return stripped if stripped.startswith("act_") else f"act_{stripped}"
+    numeric = stripped
+    while numeric.startswith("act_"):
+        numeric = numeric[4:]
+    if not numeric:
+        raise ValueError(f"ad_account_id inválido: '{raw}'")
+    return f"act_{numeric}"
 
 
 def validate_meta_token(access_token: str) -> dict:
