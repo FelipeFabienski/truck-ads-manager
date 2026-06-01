@@ -66,6 +66,16 @@ class MetaAdsProvider(AdsProvider):
     def activate_campaign(self, campaign_id: str) -> dict:
         return self.update_campaign(campaign_id, {"status": "ACTIVE"})
 
+    def update_ad_status(self, ad_id: str, status: str) -> dict:
+        """Update a single ad's status via PATCH /{ad_id} on the Meta Graph API."""
+        return self._client.patch(ad_id, {"status": status})
+
+    def activate_ad(self, ad_id: str) -> dict:
+        return self.update_ad_status(ad_id, "ACTIVE")
+
+    def pause_ad(self, ad_id: str) -> dict:
+        return self.update_ad_status(ad_id, "PAUSED")
+
     # ── Métricas ───────────────────────────────────────────────────────────────
 
     def get_metrics(self, campaign_id: str, period: str = "last_7d") -> dict:

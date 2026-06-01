@@ -2640,15 +2640,22 @@
 
             /* ═══ AD ACTIONS ═══ */
             async function toggleStatus(campaignId, currentStatus) {
+                const activating = currentStatus !== 'ativo';
+                if (activating) {
+                    const ok = await confirmModal(
+                        'Ativar anúncio na Meta Ads?\n\nEssa ação ativará o anúncio na conta do cliente e poderá gerar cobranças reais. Deseja continuar?'
+                    );
+                    if (!ok) return;
+                }
                 try {
-                    const action = currentStatus === 'ativo' ? 'pausar' : 'ativar';
+                    const action = activating ? 'ativar' : 'pausar';
                     const result = await apiCall('PATCH', `/ads/truck/${campaignId}/${action}`);
                     await loadAds();
                     renderCampanhas();
                     renderDashboard();
-                    toast(result.status === 'ativo' ? 'Campanha ativada!' : 'Campanha pausada.');
+                    toast(result.status === 'ativo' ? 'Campanha ativada na Meta!' : 'Campanha pausada na Meta.');
                 } catch (err) {
-                    toast('Erro: ' + err.message);
+                    toast('Erro: ' + (err.detail || err.message || 'Erro ao alterar status.'));
                 }
             }
             async function excluir(campaignId) {

@@ -28,6 +28,7 @@ class StatusUpdateResponse(BaseModel):
 
     campaign_id: str
     status: str = Field(description="Novo status em PT: pausado | ativo")
+    meta_status: str | None = Field(default=None, description="Status Meta confirmado: ACTIVE | PAUSED")
 
 
 class DeleteResponse(BaseModel):

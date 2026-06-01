@@ -112,33 +112,131 @@ def get_campaign(
 @router.patch(
     "/{campaign_id}/pausar",
     response_model=StatusUpdateResponse,
-    summary="Pausar campanha",
+    summary="Pausar campanha na Meta Ads",
     responses={
-        404: {"description": "Campanha não encontrada"},
-        409: {"description": "Transição de status inválida"},
+        404: {"description": "Campanha ou credencial não encontrada"},
+        409: {"description": "Campanha não publicada ou transição inválida"},
+        400: {"description": "Erro da Meta Ads API"},
+        502: {"description": "Erro inesperado ao chamar a Meta Ads API"},
     },
 )
 def pause_campaign(
     campaign_id: str,
-    service: TruckAdService = Depends(get_truck_service),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> dict:
-    return service.pause_campaign(campaign_id)
+    campaign_repo = CampaignRepository(db, user_id=current_user.id)
+    record = campaign_repo.get_by_id(campaign_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail="Campanha não encontrada")
+
+    if record.status == "rascunho":
+        raise HTTPException(
+            status_code=409,
+            detail="Campanha precisa ser publicada na Meta antes de ser pausada.",
+        )
+    if record.status == "pausado":
+        raise HTTPException(status_code=409, detail="Campanha já está pausada.")
+
+    if record.meta_ad_id is None:
+        raise HTTPException(
+            status_code=409,
+            detail="Campanha sem anúncio na Meta. Publique antes de pausar.",
+        )
+    if record.meta_credential_id is None:
+        raise HTTPException(status_code=409, detail="Credencial Meta não vinculada à campanha.")
+
+    cred_repo = MetaCredentialRepository(db, user_id=current_user.id)
+    credential = cred_repo.get_by_id(record.meta_credential_id)
+    if credential is None:
+        raise HTTPException(status_code=404, detail="Credencial Meta não encontrada.")
+
+    try:
+        access_token = decrypt(credential.access_token_enc)
+    except Exception:
+        raise HTTPException(status_code=500, detail="Erro ao descriptografar token da credencial.")
+
+    provider = MetaAdsProvider(
+        access_token=access_token,
+        ad_account_id=credential.ad_account_id,
+        page_id=credential.page_id or "",
+        instagram_actor_id=credential.instagram_actor_id,
+    )
+
+    try:
+        provider.pause_ad(record.meta_ad_id)
+    except MetaAPIError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Erro inesperado ao chamar a Meta: {exc}") from exc
+
+    campaign_repo.update_status_result(record, status="pausado", meta_status="PAUSED")
+    return {"campaign_id": campaign_id, "status": "pausado", "meta_status": "PAUSED"}
 
 
 @router.patch(
     "/{campaign_id}/ativar",
     response_model=StatusUpdateResponse,
-    summary="Ativar campanha",
+    summary="Ativar campanha na Meta Ads",
     responses={
-        404: {"description": "Campanha não encontrada"},
-        409: {"description": "Transição de status inválida"},
+        404: {"description": "Campanha ou credencial não encontrada"},
+        409: {"description": "Campanha não publicada ou transição inválida"},
+        400: {"description": "Erro da Meta Ads API"},
+        502: {"description": "Erro inesperado ao chamar a Meta Ads API"},
     },
 )
 def activate_campaign(
     campaign_id: str,
-    service: TruckAdService = Depends(get_truck_service),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> dict:
-    return service.activate_campaign(campaign_id)
+    campaign_repo = CampaignRepository(db, user_id=current_user.id)
+    record = campaign_repo.get_by_id(campaign_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail="Campanha não encontrada")
+
+    if record.status == "rascunho":
+        raise HTTPException(
+            status_code=409,
+            detail="Campanha precisa ser publicada na Meta antes de ser ativada.",
+        )
+    if record.status == "ativo":
+        raise HTTPException(status_code=409, detail="Campanha já está ativa.")
+
+    if record.meta_ad_id is None:
+        raise HTTPException(
+            status_code=409,
+            detail="Campanha sem anúncio na Meta. Publique antes de ativar.",
+        )
+    if record.meta_credential_id is None:
+        raise HTTPException(status_code=409, detail="Credencial Meta não vinculada à campanha.")
+
+    cred_repo = MetaCredentialRepository(db, user_id=current_user.id)
+    credential = cred_repo.get_by_id(record.meta_credential_id)
+    if credential is None:
+        raise HTTPException(status_code=404, detail="Credencial Meta não encontrada.")
+
+    try:
+        access_token = decrypt(credential.access_token_enc)
+    except Exception:
+        raise HTTPException(status_code=500, detail="Erro ao descriptografar token da credencial.")
+
+    provider = MetaAdsProvider(
+        access_token=access_token,
+        ad_account_id=credential.ad_account_id,
+        page_id=credential.page_id or "",
+        instagram_actor_id=credential.instagram_actor_id,
+    )
+
+    try:
+        provider.activate_ad(record.meta_ad_id)
+    except MetaAPIError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Erro inesperado ao chamar a Meta: {exc}") from exc
+
+    campaign_repo.update_status_result(record, status="ativo", meta_status="ACTIVE")
+    return {"campaign_id": campaign_id, "status": "ativo", "meta_status": "ACTIVE"}
 
 
 @router.delete(

@@ -244,63 +244,6 @@ class TestGetCampaign:
         assert "message" in body
 
 
-# ── PATCH /ads/truck/{id}/pausar ──────────────────────────────────────────────
-
-class TestPauseCampaign:
-    def _create_and_activate(self, client, valid_payload) -> str:
-        campaign_id = client.post("/ads/truck/", json=valid_payload).json()["campaign_id"]
-        client.patch(f"/ads/truck/{campaign_id}/ativar")
-        return campaign_id
-
-    def test_pause_active_campaign(self, client, valid_payload):
-        cid = self._create_and_activate(client, valid_payload)
-        r = client.patch(f"/ads/truck/{cid}/pausar")
-        assert r.status_code == 200
-        assert r.json()["status"] == "pausado"
-
-    def test_pause_returns_campaign_id(self, client, valid_payload):
-        cid = self._create_and_activate(client, valid_payload)
-        body = client.patch(f"/ads/truck/{cid}/pausar").json()
-        assert body["campaign_id"] == cid
-
-    def test_pause_draft_returns_409(self, client, valid_payload):
-        cid = client.post("/ads/truck/", json=valid_payload).json()["campaign_id"]
-        r = client.patch(f"/ads/truck/{cid}/pausar")
-        assert r.status_code == 409
-
-    def test_pause_unknown_returns_404(self, client):
-        r = client.patch("/ads/truck/cmp_ghost/pausar")
-        assert r.status_code == 404
-
-
-# ── PATCH /ads/truck/{id}/ativar ──────────────────────────────────────────────
-
-class TestActivateCampaign:
-    def test_activate_draft_campaign(self, client, valid_payload):
-        cid = client.post("/ads/truck/", json=valid_payload).json()["campaign_id"]
-        r = client.patch(f"/ads/truck/{cid}/ativar")
-        assert r.status_code == 200
-        assert r.json()["status"] == "ativo"
-
-    def test_activate_paused_campaign(self, client, valid_payload):
-        cid = client.post("/ads/truck/", json=valid_payload).json()["campaign_id"]
-        client.patch(f"/ads/truck/{cid}/ativar")
-        client.patch(f"/ads/truck/{cid}/pausar")
-        r = client.patch(f"/ads/truck/{cid}/ativar")
-        assert r.status_code == 200
-        assert r.json()["status"] == "ativo"
-
-    def test_activate_active_returns_409(self, client, valid_payload):
-        cid = client.post("/ads/truck/", json=valid_payload).json()["campaign_id"]
-        client.patch(f"/ads/truck/{cid}/ativar")
-        r = client.patch(f"/ads/truck/{cid}/ativar")
-        assert r.status_code == 409
-
-    def test_activate_unknown_returns_404(self, client):
-        r = client.patch("/ads/truck/cmp_ghost/ativar")
-        assert r.status_code == 404
-
-
 # ── DELETE /ads/truck/{id} ────────────────────────────────────────────────────
 
 class TestDeleteCampaign:

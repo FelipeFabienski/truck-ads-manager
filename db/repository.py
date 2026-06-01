@@ -25,6 +25,19 @@ class CampaignRepository:
         record.status = status
         self.db.commit()
 
+    def update_status_result(
+        self,
+        record: CampaignModel,
+        status: str,
+        meta_status: str,
+    ) -> CampaignModel:
+        """Update status + meta_status atomically after a confirmed Meta API call."""
+        record.status = status
+        record.meta_status = meta_status
+        self.db.commit()
+        self.db.refresh(record)
+        return record
+
     def update_record_external_id(self, record: CampaignModel, external_id: str) -> None:
         record.external_id = external_id
         self.db.commit()
