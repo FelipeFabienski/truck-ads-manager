@@ -1847,7 +1847,14 @@
                                 <div class="metric-value" id="mt-orc">R$0</div>
                             </div>
                         </div>
-                        <div class="section-title">Performance por anúncio</div>
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+                            <div class="section-title" style="margin-bottom:0">Performance por anúncio</div>
+                            <div style="display:flex;gap:6px">
+                                <button class="btn btn-outline btn-sm met-period-btn" data-period="today" onclick="setMetricsPeriod('today')">Hoje</button>
+                                <button class="btn btn-outline btn-sm met-period-btn active" data-period="last_7d" onclick="setMetricsPeriod('last_7d')">7 dias</button>
+                                <button class="btn btn-outline btn-sm met-period-btn" data-period="last_30d" onclick="setMetricsPeriod('last_30d')">30 dias</button>
+                            </div>
+                        </div>
                         <div class="ads-list" id="met-list"></div>
                     </div>
                 </div>
@@ -2770,6 +2777,18 @@
                           )
                         : filtered.map(ad => adCardHTML(ad, false)).join("");
             }
+            let metricsPeriod = 'last_7d';
+            const metricsCache = {};
+
+            function setMetricsPeriod(p) {
+                metricsPeriod = p;
+                document.querySelectorAll('.met-period-btn').forEach(b => {
+                    b.classList.toggle('active', b.dataset.period === p);
+                });
+                Object.keys(metricsCache).forEach(k => delete metricsCache[k]);
+                renderMetricas();
+            }
+
             function renderMetricas() {
                 document.getElementById("mt-total").textContent = ads.length;
                 document.getElementById("mt-ativos").textContent = ads.filter(
@@ -2778,26 +2797,71 @@
                 document.getElementById("mt-orc").textContent =
                     "R$" + ads.reduce((s, a) => s + (a.spend || 0), 0).toFixed(2).replace(".", ",");
                 const c = document.getElementById("met-list");
-                c.innerHTML =
-                    ads.length === 0
-                        ? emptyHTML(
-                              "📊",
-                              "Sem dados ainda",
-                              "Os dados aparecem após criar anúncios",
-                          )
-                        : ads
-                              .map(
-                                  (ad) => `<div class="ad-card">
-      <div class="ad-thumb">🚛</div>
-      <div class="ad-info"><div class="ad-name">${escapeHtml(ad.modelo)} ${escapeHtml(ad.cor)} ${escapeHtml(ad.ano)}</div><div class="ad-meta">${escapeHtml(ad.cidade)} · ${escapeHtml(ad.created || "—")}</div></div>
-      <div class="ad-stats">
-        <div class="ad-stat"><div class="ad-stat-val">${ad.leads}</div><div class="ad-stat-lbl">Leads</div></div>
-        <div class="ad-stat"><div class="ad-stat-val">R$${(ad.spend || 0).toFixed(2).replace('.', ',')}</div><div class="ad-stat-lbl">Investido</div></div>
-        <div class="ad-stat"><div class="ad-stat-val">${ad.leads > 0 ? "R$" + Math.round(ad.spend / ad.leads) : "—"}</div><div class="ad-stat-lbl">CPL</div></div>
-      </div>
-    </div>`,
-                              )
-                              .join("");
+                if (ads.length === 0) {
+                    c.innerHTML = emptyHTML("📊", "Sem dados ainda", "Os dados aparecem após criar anúncios");
+                    return;
+                }
+                c.innerHTML = ads.map(ad => `
+                  <div class="ad-card" style="flex-direction:column;align-items:stretch;gap:0">
+                    <div style="display:flex;align-items:center;gap:12px;padding:4px 0">
+                      <div class="ad-thumb">🚛</div>
+                      <div class="ad-info" style="flex:1">
+                        <div class="ad-name">${escapeHtml(ad.modelo)} ${escapeHtml(ad.cor)} ${escapeHtml(ad.ano)}</div>
+                        <div class="ad-meta">${escapeHtml(ad.cidade)} · ${escapeHtml(ad.created || "—")} · <span class="status-badge ${ad.status}">${escapeHtml(ad.status)}</span></div>
+                      </div>
+                      ${ad.meta_campaign_id
+                        ? `<button class="btn btn-outline btn-sm" onclick="toggleMetrics('${escapeHtml(ad.campaign_id)}')" id="met-btn-${escapeHtml(ad.campaign_id)}">Ver métricas Meta</button>`
+                        : ''}
+                    </div>
+                    <div id="met-detail-${escapeHtml(ad.campaign_id)}" style="display:none;margin-top:10px;border-top:1px solid var(--border);padding-top:10px"></div>
+                  </div>`).join('');
+            }
+
+            async function toggleMetrics(campaignId) {
+                const detail = document.getElementById(`met-detail-${campaignId}`);
+                const btn = document.getElementById(`met-btn-${campaignId}`);
+                if (detail.style.display !== 'none') {
+                    detail.style.display = 'none';
+                    btn.textContent = 'Ver métricas Meta';
+                    return;
+                }
+                detail.style.display = '';
+                btn.textContent = 'Fechar';
+                if (metricsCache[campaignId + metricsPeriod]) {
+                    detail.innerHTML = _metricsDetailHTML(metricsCache[campaignId + metricsPeriod]);
+                    return;
+                }
+                detail.innerHTML = '<div style="text-align:center;padding:18px;color:var(--text-tertiary);font-size:13px">Carregando métricas da Meta...</div>';
+                try {
+                    const data = await apiCall('GET', `/ads/truck/${campaignId}/metricas?period=${metricsPeriod}`);
+                    metricsCache[campaignId + metricsPeriod] = data;
+                    detail.innerHTML = _metricsDetailHTML(data);
+                } catch (err) {
+                    const msg = err.detail || err.message || 'Erro ao carregar métricas.';
+                    detail.innerHTML = `<div style="color:var(--red,#e53e3e);font-size:13px;padding:8px 0">${escapeHtml(msg)}</div>`;
+                }
+            }
+
+            function _metricsDetailHTML(d) {
+                const fmt = v => v != null ? v.toLocaleString('pt-BR', {maximumFractionDigits:2}) : '—';
+                const fmtR = v => v != null ? 'R$' + v.toFixed(2).replace('.',',') : '—';
+                const pct = v => v != null ? v.toFixed(2) + '%' : '—';
+                const syncedAt = d.synced_at ? new Date(d.synced_at).toLocaleString('pt-BR') : '';
+                return `
+                  <div class="metrics-grid" style="grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px">
+                    <div class="metric-card"><div class="metric-label">Impressões</div><div class="metric-value" style="font-size:18px">${fmt(d.impressions)}</div></div>
+                    <div class="metric-card"><div class="metric-label">Alcance</div><div class="metric-value" style="font-size:18px">${fmt(d.reach)}</div></div>
+                    <div class="metric-card"><div class="metric-label">Cliques</div><div class="metric-value" style="font-size:18px">${fmt(d.clicks)}</div></div>
+                    <div class="metric-card"><div class="metric-label">Leads</div><div class="metric-value" style="font-size:18px">${fmt(d.leads)}</div></div>
+                    <div class="metric-card"><div class="metric-label">Investido</div><div class="metric-value" style="font-size:18px">${fmtR(d.spent)}</div></div>
+                    <div class="metric-card"><div class="metric-label">CPL</div><div class="metric-value" style="font-size:18px">${fmtR(d.cpl)}</div></div>
+                    <div class="metric-card"><div class="metric-label">CPC</div><div class="metric-value" style="font-size:18px">${fmtR(d.cpc)}</div></div>
+                    <div class="metric-card"><div class="metric-label">CTR</div><div class="metric-value" style="font-size:18px">${pct(d.ctr)}</div></div>
+                  </div>
+                  <div style="font-size:11px;color:var(--text-tertiary);display:flex;align-items:center;gap:6px">
+                    <span style="width:6px;height:6px;border-radius:50%;background:var(--green,#38a169);display:inline-block"></span>
+                    Dados sincronizados da Meta${syncedAt ? ' · ' + syncedAt : ''}
+                  </div>`;
             }
 
             /* ═══ CREDENTIALS ═══ */

@@ -79,7 +79,10 @@ class MetaAdsProvider(AdsProvider):
     # ── Métricas ───────────────────────────────────────────────────────────────
 
     def get_metrics(self, campaign_id: str, period: str = "last_7d") -> dict:
-        return metrics.get_metrics(self._client, campaign_id, period)
+        return metrics.get_campaign_insights(self._client, campaign_id, period)
+
+    def get_campaign_insights(self, campaign_id: str, period: str = "last_7d") -> dict:
+        return metrics.get_campaign_insights(self._client, campaign_id, period)
 
     # ── Conta ──────────────────────────────────────────────────────────────────
 

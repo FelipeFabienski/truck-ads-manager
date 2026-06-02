@@ -43,10 +43,16 @@ class MetricsResponse(BaseModel):
 
     campaign_id: str
     impressions: int
+    reach: int
     clicks: int
     leads: int
     spent: float
-    cpl: float
+    cpl: float | None
+    cpc: float | None
+    cpm: float | None
+    ctr: float | None
+    source: str
+    synced_at: str
     period: str
 
 

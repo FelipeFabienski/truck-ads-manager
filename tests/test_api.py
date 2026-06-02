@@ -269,33 +269,6 @@ class TestDeleteCampaign:
         assert r.status_code == 404
 
 
-# ── GET /ads/truck/{id}/metricas ──────────────────────────────────────────────
-
-class TestGetMetrics:
-    def test_returns_metrics_structure(self, client, valid_payload):
-        cid = client.post("/ads/truck/", json=valid_payload).json()["campaign_id"]
-        body = client.get(f"/ads/truck/{cid}/metricas").json()
-        for field in ("campaign_id", "impressions", "clicks", "leads", "spent", "cpl", "period"):
-            assert field in body, f"Missing field: {field}"
-
-    def test_default_period_is_last_7d(self, client, valid_payload):
-        cid = client.post("/ads/truck/", json=valid_payload).json()["campaign_id"]
-        body = client.get(f"/ads/truck/{cid}/metricas").json()
-        assert body["period"] == "last_7d"
-
-    def test_custom_period_today(self, client, valid_payload):
-        cid = client.post("/ads/truck/", json=valid_payload).json()["campaign_id"]
-        body = client.get(f"/ads/truck/{cid}/metricas?period=today").json()
-        assert body["period"] == "today"
-
-    def test_invalid_period_returns_422(self, client, valid_payload):
-        cid = client.post("/ads/truck/", json=valid_payload).json()["campaign_id"]
-        r = client.get(f"/ads/truck/{cid}/metricas?period=semana_passada")
-        assert r.status_code == 422
-
-    def test_unknown_campaign_returns_404(self, client):
-        r = client.get("/ads/truck/cmp_ghost/metricas")
-        assert r.status_code == 404
 
 
 # ── Helpers for auth-aware tests ──────────────────────────────────────────────

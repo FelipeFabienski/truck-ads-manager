@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, 
 from sqlalchemy.orm import Session
 
 from ads.exceptions import AdsError
-from ads.providers.meta.exceptions import MetaAPIError
+from ads.providers.meta.exceptions import MetaAPIError, MetaAuthError, MetaPermissionError, MetaRateLimitError
 from ads.providers.meta.provider import MetaAdsProvider
 from ads.truck.adapter import translate_status_to_en
 from ads.truck.schemas import TruckAdCreateRequest, TruckAdPublishResponse
@@ -336,8 +336,15 @@ def publish_campaign_to_meta(
 @router.get(
     "/{campaign_id}/metricas",
     response_model=MetricsResponse,
-    summary="Métricas da campanha",
-    responses={404: {"description": "Campanha não encontrada"}},
+    summary="Métricas reais da campanha via Meta Insights API",
+    responses={
+        404: {"description": "Campanha ou credencial não encontrada"},
+        409: {"description": "Campanha não publicada na Meta"},
+        403: {"description": "Token sem permissão de leitura de anúncios"},
+        429: {"description": "Rate limit da Meta API excedido"},
+        400: {"description": "Erro da Meta Ads API"},
+        502: {"description": "Erro inesperado ao chamar a Meta API"},
+    },
 )
 def get_metrics(
     campaign_id: str,
@@ -346,6 +353,47 @@ def get_metrics(
         description="Período: today | last_7d | last_30d",
         pattern=r"^(today|last_7d|last_30d)$",
     ),
-    service: TruckAdService = Depends(get_truck_service),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> dict:
-    return service.get_campaign_metrics(campaign_id, period)
+    campaign_repo = CampaignRepository(db, user_id=current_user.id)
+    record = campaign_repo.get_by_id(campaign_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail="Campanha não encontrada")
+
+    if record.meta_campaign_id is None:
+        raise HTTPException(
+            status_code=409,
+            detail="Campanha não publicada na Meta. Publique antes de consultar métricas.",
+        )
+
+    if record.meta_credential_id is None:
+        raise HTTPException(status_code=409, detail="Credencial Meta não vinculada à campanha.")
+
+    cred_repo = MetaCredentialRepository(db, user_id=current_user.id)
+    credential = cred_repo.get_by_id(record.meta_credential_id)
+    if credential is None:
+        raise HTTPException(status_code=404, detail="Credencial Meta não encontrada.")
+
+    try:
+        access_token = decrypt(credential.access_token_enc)
+    except Exception:
+        raise HTTPException(status_code=500, detail="Erro ao descriptografar token da credencial.")
+
+    provider = MetaAdsProvider(
+        access_token=access_token,
+        ad_account_id=credential.ad_account_id,
+        page_id=credential.page_id or "",
+        instagram_actor_id=credential.instagram_actor_id,
+    )
+
+    try:
+        return provider.get_campaign_insights(record.meta_campaign_id, period)
+    except (MetaPermissionError, MetaAuthError) as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except MetaRateLimitError as exc:
+        raise HTTPException(status_code=429, detail=str(exc)) from exc
+    except MetaAPIError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Erro inesperado ao chamar a Meta: {exc}") from exc
