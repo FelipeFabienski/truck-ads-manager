@@ -1013,7 +1013,7 @@
         </style>
     </head>
     <body>
-        <div class="app">
+        <div class="app" id="app-shell" style="display:none">
             <!-- ═══════════ SIDEBAR ═══════════ -->
             <aside class="sidebar">
                 <div class="sidebar-brand">
@@ -1099,7 +1099,6 @@
                             <span class="user-name" id="user-name">Carregando…</span>
                             <button type="button" class="btn btn-outline btn-sm" onclick="logout()" style="padding:4px 10px;font-size:11px;">Sair</button>
                         </div>
-                        <button type="button" class="btn btn-outline btn-sm" id="auth-login-btn" onclick="showAuthModal('login')" style="display:none">Entrar</button>
                         <button type="button" class="btn btn-primary" onclick="nav('criar')">
                             <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
                             Nova campanha
@@ -1942,7 +1941,7 @@
                         <p>Clique no link para ativar sua conta e, em seguida, faça login.</p>
                     </div>
                     <button type="button" class="btn btn-outline auth-submit" onclick="resendVerification()">Reenviar confirmação</button>
-                    <button type="button" class="btn btn-outline auth-submit" onclick="hideAuthModal()" style="margin-top:6px">Fechar</button>
+                    <button type="button" class="btn btn-outline auth-submit" onclick="showAuthPanel('login')" style="margin-top:6px">Voltar ao login</button>
                 </div>
                 <!-- Forgot password -->
                 <div id="auth-forgot" style="display:none">
@@ -2014,14 +2013,9 @@
                 localStorage.removeItem('jwt');
             }
 
-            function _showLoginBtn() {
-                document.getElementById('user-info').style.display = 'none';
-                document.getElementById('auth-login-btn').style.display = '';
-            }
-
             async function logout() {
                 _clearSession();
-                _showLoginBtn();
+                showAuthModal('login');
             }
 
             async function loadCurrentUser() {
@@ -2033,20 +2027,21 @@
                     document.getElementById('user-avatar').textContent = initials;
                     document.getElementById('user-name').textContent = user.name || 'Usuário';
                     document.getElementById('user-info').style.display = 'flex';
-                    document.getElementById('auth-login-btn').style.display = 'none';
                 } catch {
                     _clearSession();
                 }
             }
 
-            /* ═══ AUTH MODAL ═══ */
+            /* ═══ AUTH SCREEN ═══ */
             function showAuthModal(panel) {
                 showAuthPanel(panel || 'login');
                 document.getElementById('auth-overlay').classList.add('show');
+                document.getElementById('app-shell').style.display = 'none';
             }
 
             function hideAuthModal() {
                 document.getElementById('auth-overlay').classList.remove('show');
+                document.getElementById('app-shell').style.display = 'flex';
             }
 
             function showAuthPanel(panel) {
@@ -2085,10 +2080,10 @@
                         return;
                     }
                     _saveTokens(data.access_token, data.refresh_token);
-                    hideAuthModal();
                     await loadCurrentUser();
                     await loadAds();
                     renderDashboard();
+                    hideAuthModal();
                 } catch {
                     _setAuthError('auth-login-err', 'Erro de conexão. Tente novamente.');
                 }
@@ -2186,7 +2181,7 @@
 
             document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('auth-overlay').addEventListener('click', function(e) {
-                    if (e.target === this) hideAuthModal();
+                    if (e.target === this && _currentUser) hideAuthModal();
                 });
             });
 
@@ -2250,6 +2245,7 @@
                         newToken = await _refreshPromise;
                     } catch {
                         _clearSession();
+                        showAuthModal('login');
                         throw new Error('Sessão expirada. Faça login novamente.');
                     }
                     const retryHeaders = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${newToken}` };
@@ -2258,6 +2254,7 @@
                     const retryRes = await fetch(path, retryOpts);
                     if (retryRes.status === 401) {
                         _clearSession();
+                        showAuthModal('login');
                         throw new Error('Sessão expirada. Faça login novamente.');
                     }
                     if (!retryRes.ok) {
@@ -3078,6 +3075,9 @@
 
             /* ═══ INIT ═══ */
             (async () => {
+                // Show login screen immediately — app stays hidden until auth confirmed
+                showAuthModal('login');
+
                 const _params = new URLSearchParams(window.location.search);
 
                 // Handle email verification link: ?verify_token=...
@@ -3103,14 +3103,18 @@
                     history.replaceState(null, '', window.location.pathname);
                 }
 
+                // Try to restore session from stored tokens
                 await loadCurrentUser();
+
                 if (_pendingResetToken) {
                     showAuthModal('reset');
-                } else if (!_currentUser) {
-                    document.getElementById('auth-login-btn').style.display = '';
+                } else if (_currentUser) {
+                    // Valid session — enter the app
+                    await loadAds();
+                    renderDashboard();
+                    hideAuthModal();
                 }
-                await loadAds();
-                renderDashboard();
+                // else: login screen stays visible (already set at top of init)
             })();
         </script>
     </body>
