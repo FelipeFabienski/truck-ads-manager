@@ -7,6 +7,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
 _logger = logging.getLogger(__name__)
+_SMTP_TIMEOUT = 15  # seconds — prevents hanging on unreachable SMTP servers
 
 
 class EmailClient:
@@ -19,6 +20,7 @@ class EmailClient:
         from_addr: str,
         from_name: str,
         use_tls: bool,
+        use_ssl: bool = False,
     ) -> None:
         self._host = host
         self._port = port
@@ -27,6 +29,7 @@ class EmailClient:
         self._from_addr = from_addr
         self._from_name = from_name
         self._use_tls = use_tls
+        self._use_ssl = use_ssl
 
     @property
     def from_header(self) -> str:
@@ -43,8 +46,10 @@ class EmailClient:
         msg.attach(MIMEText(text_body, "plain", "utf-8"))
         msg.attach(MIMEText(html_body, "html", "utf-8"))
 
-        with smtplib.SMTP(self._host, self._port) as smtp:
-            if self._use_tls:
+        # Port 465 uses implicit SSL (SMTP_SSL); port 587 uses STARTTLS (SMTP)
+        smtp_cls = smtplib.SMTP_SSL if self._use_ssl else smtplib.SMTP
+        with smtp_cls(self._host, self._port, timeout=_SMTP_TIMEOUT) as smtp:
+            if not self._use_ssl and self._use_tls:
                 smtp.starttls()
             if self._user and self._password:
                 smtp.login(self._user, self._password)
@@ -56,13 +61,16 @@ class EmailClient:
         host = os.getenv("SMTP_HOST", "").strip()
         if not host:
             return None
+        port = int(os.getenv("SMTP_PORT", "587"))
+        use_ssl = port == 465 or os.getenv("SMTP_USE_SSL", "false").lower() == "true"
         from_addr = os.getenv("SMTP_FROM", os.getenv("SMTP_USER", "noreply@example.com"))
         return cls(
             host=host,
-            port=int(os.getenv("SMTP_PORT", "587")),
+            port=port,
             user=os.getenv("SMTP_USER", ""),
             password=os.getenv("SMTP_PASSWORD", ""),
             from_addr=from_addr,
             from_name=os.getenv("SMTP_FROM_NAME", ""),
             use_tls=os.getenv("SMTP_USE_TLS", "true").lower() == "true",
+            use_ssl=use_ssl,
         )
