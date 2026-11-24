@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.env
+server/data/
+server/uploads/
+*.log
+.DS_Store
+
+# --- Proteções adicionais de segredos/dados ---
+server/.env
+**/.env
+server/data/
+server/uploads/
+*.log
+.mimosa/
