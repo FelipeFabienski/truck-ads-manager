@@ -150,6 +150,53 @@ Em **Editar** integração: informe um novo Access Token (vazio mantém o atual)
 
 ---
 
+## 🚀 Deploy no Railway (versão Node/React — aplicação principal)
+
+Deploy de **serviço único**: o backend Node serve também o frontend React compilado (`web/dist`) com fallback SPA — um só serviço e domínio.
+
+### Como funciona (automático)
+
+O arquivo [`railway.json`](railway.json) na raiz configura o Railway (Railpack):
+- **Build:** `npm ci && npm run build` (instala workspaces e compila o React para `web/dist`)
+- **Start:** `npm run start` → `node server/src/index.js` (lê `PORT` do Railway e escuta em `0.0.0.0`)
+- **Health check:** `GET /api/health` (público, sem autenticação)
+
+> ⚠️ **Cada push em `main` dispara o deploy automaticamente.** O painel do serviço deve estar com **Root Directory = `/`** (raiz do repositório).
+
+### Configuração obrigatória no painel do Railway
+
+1. **Settings → Root Directory:** `/` (raiz) — atualmente pode estar `/legacy-python`; corrija para a raiz
+2. **Variables:**
+
+| Variável | Valor | Por quê |
+|---|---|---|
+| `NODE_ENV` | `production` | cookies Secure + modo produção |
+| `APP_URL` | `https://truck-ads-manager-production.up.railway.app` | links nos emails |
+| `META_CREDENTIALS_ENCRYPTION_KEY` | 64 hex **fixos** (ex: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`) | **CRÍTICO:** sem chave fixa, os tokens criptografados ficam ilegíveis após cada redeploy (o arquivo dev vive em filesystem efêmero) |
+| `DATABASE_PATH` | `/data/facilitador.db` | persistência fora do efêmero |
+| `UPLOAD_DIR` | `/data/uploads` | fotos/avatares persistentes |
+| `SMTP_HOST`/`SMTP_PORT`/`SMTP_USER`/`SMTP_PASS`/`SMTP_FROM` | do seu provedor | emails reais (confirmação/reset); sem eles, modo dev |
+| `SESSION_IDLE_MINUTES` / `SESSION_ABSOLUTE_DAYS` | opcional | padrões: 15 min / 7 dias |
+
+3. **Storage → +New → Volume:** monte um volume em **`/data`** (mesma máquina do serviço). É ele que garante que **usuários, campanhas, tokens criptografados e o banco SQLite sobrevivam aos redeploys**. Sem volume, o banco é recriado vazio a cada deploy (nenhum dado do Postgres legado é apagado — o banco legado do Python continua intocado no seu plugin PostgreSQL).
+
+### Sobre o PostgreSQL legado
+
+A versão atual usa **SQLite** no volume; o PostgreSQL do legado **não é lido nem alterado** pela aplicação atual. Se quiser migrar dados antigos (usuários/campanhas do legado), será um projeto à parte — nada é excluído automaticamente.
+
+### Health check e rotas
+
+- API sob `/api/*` (404 JSON em rotas inexistentes)
+- Frontend SPA em todas as demais rotas GET (`/login`, `/app/*`…) com `index.html` do build
+- Uploads servidos em `/uploads/*`
+- Health check público: `/api/health`
+
+### Deploy do legado (se um dia precisar)
+
+O código Python permanece **apenas referência** em `legacy-python/`, autocontido (com `railway.toml`, `Dockerfile`, `Procfile` e `alembic` próprios). Para implantá-lo, crie um serviço Railway com **Root Directory = `/legacy-python`** — não afeta a aplicação principal.
+
+---
+
 ## Estrutura do projeto
 
 ```

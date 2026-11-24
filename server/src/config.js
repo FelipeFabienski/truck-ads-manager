@@ -71,10 +71,19 @@ export const config = {
   },
 };
 
-// Chave AES-256: lê do env ou gera/persiste em server/data/.encryption-key (conveniência dev)
+// Chave AES-256 para criptografar credenciais Meta: prioridade
+// META_CREDENTIALS_ENCRYPTION_KEY → ENCRYPTION_KEY → arquivo gerado (dev).
+// EM PRODUÇÃO defina SEMPRE uma chave fixa — sem ela, tokens salvos ficam
+// ilegíveis após redeploys (o arquivo dev vive em filesystem efêmero).
 function resolveEncryptionKey() {
-  if (process.env.ENCRYPTION_KEY && /^[0-9a-fA-F]{64}$/.test(process.env.ENCRYPTION_KEY)) {
-    return Buffer.from(process.env.ENCRYPTION_KEY, 'hex');
+  const fromEnv =
+    (process.env.META_CREDENTIALS_ENCRYPTION_KEY && /^[0-9a-fA-F]{64}$/.test(process.env.META_CREDENTIALS_ENCRYPTION_KEY)
+      ? process.env.META_CREDENTIALS_ENCRYPTION_KEY
+      : process.env.ENCRYPTION_KEY && /^[0-9a-fA-F]{64}$/.test(process.env.ENCRYPTION_KEY)
+        ? process.env.ENCRYPTION_KEY
+        : null);
+  if (fromEnv) {
+    return Buffer.from(fromEnv, 'hex');
   }
   const keyFile = path.join(ROOT, 'data', '.encryption-key');
   try {

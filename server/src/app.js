@@ -2,6 +2,7 @@ import express from 'express';
 import cookieParser from 'cookie-parser';
 import path from 'node:path';
 import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { config } from './config.js';
 import { requireAuth } from './middlewares/auth.js';
 import { rateLimit } from './middlewares/rateLimit.js';
@@ -49,6 +50,23 @@ export function createApp() {
   app.use('/api/dev', requireAuth, devRoutes);
 
   app.use('/api', (req, res) => res.status(404).json({ error: 'Rota não encontrada.' }));
+
+  // Frontend React em produção: serve web/dist com fallback SPA (serviço único no Railway).
+  // Ativa apenas quando o build existe — em dev o Vite continua servindo o frontend.
+  const webDist = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../web/dist');
+  const spaIndex = path.join(webDist, 'index.html');
+  if (fs.existsSync(spaIndex)) {
+    app.use(express.static(webDist, { maxAge: '1d', index: false }));
+    app.use((req, res, next) => {
+      if (req.method !== 'GET' || req.path.startsWith('/api') || req.path.startsWith('/uploads')) return next();
+      try {
+        res.type('html').send(fs.readFileSync(spaIndex));
+      } catch (err) {
+        console.error('Falha ao servir SPA:', err.message);
+        res.status(500).send('Falha ao carregar a interface.');
+      }
+    });
+  }
 
   // Tratamento central de erros (JSON de erro amigável)
   app.use((err, req, res, next) => {

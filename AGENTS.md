@@ -78,6 +78,7 @@ implementação.
 
 ## Contexto técnico do projeto (para agentes futuros)
 
+- **Deploy:** Railway, serviço único na raiz do repo ([`railway.json`](railway.json): build `npm ci && npm run build`, start `npm run start`, healthcheck `/api/health`). O backend serve o frontend (`web/dist`) com fallback SPA. **Push em `main` dispara deploy automático** — sempre revisar e avisar o usuário antes do push. Persistência via Volume montado em `/data` com `DATABASE_PATH=/data/facilitador.db` e `UPLOAD_DIR=/data/uploads`; **`META_CREDENTIALS_ENCRYPTION_KEY` fixa nos envs do Railway é obrigatória** (sem ela os tokens criptografados se perdem nos redeploys). Deploy do legado (se um dia necessário): serviço com Root Directory `/legacy-python`.
 - **Aplicação principal:** Node.js/React — **todas as novas implementações são feitas
   exclusivamente em `server/` (Express 5 + better-sqlite3, porta 4000) e `web/`
   (React 19 + Vite, porta 5173)**. Nada deve ser adicionado ao `legacy-python/`.
