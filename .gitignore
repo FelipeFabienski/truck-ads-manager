@@ -1,13 +1,27 @@
+# --- Python (implementação legada) ---
 __pycache__/
 *.pyc
 *.pyo
 .pytest_cache/
-.env
 *.egg-info/
-dist/
 build/
 .venv/
 venv/
-*.log
 server.err
 analyze.py
+
+# --- Node.js / React (implementação atual) ---
+node_modules/
+dist/
+
+# --- Segredos e dados sensíveis (NUNCA versionar) ---
+.env
+server/.env
+**/.env
+server/data/
+server/uploads/
+
+# --- Logs e temporários ---
+*.log
+.DS_Store
+.mimosa/
