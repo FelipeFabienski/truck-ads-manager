@@ -32,6 +32,7 @@ Plataforma online para criar, publicar e gerenciar anúncios no **Facebook** e *
 - **Backend:** Node.js + Express 5 + SQLite (better-sqlite3) — camadas: rotas finas → `credentialStore`/`userStore`/`campaignStore` → `metaOps` → **`MetaAdsService`** (única saída de rede)
 - **Frontend:** React 19 + Vite + React Router, CSS próprio
 - **Monorepo npm workspaces:** `server/` (porta 4000) + `web/` (porta 5173 com proxy `/api` e `/uploads`)
+- **Legado:** a implementação anterior em **Python/FastAPI** está preservada em [`legacy-python/`](legacy-python/) (com seus próprios `railway.toml`, `Dockerfile`, `Procfile`, `alembic` e `requirements.txt`), **sem papel ativo** na aplicação atual. Para implantar o legado no Railway, aponte o *Root Directory* do serviço para `/legacy-python`.
 
 ---
 
@@ -153,26 +154,25 @@ Em **Editar** integração: informe um novo Access Token (vazio mantém o atual)
 
 ```
 facilitador-anuncios/
-├── server/
+├── AGENTS.md                            # regras permanentes para agentes (sync, segredos)
+├── server/                              # ⭐ APLICAÇÃO PRINCIPAL — backend Node.js
 │   ├── scripts/import-admin-token.mjs   # importação inicial BYOT do admin
 │   ├── src/
 │   │   ├── config.js                    # env + defaults (META_API_VERSION, sessão…)
-│   │   ├── db.js / migrations.js        # schema + migration 001 (meta_credentials v2, audit_logs)
+│   │   ├── db.js / migrations.js        # schema SQLite + migration 001 (credenciais v2, audit_logs)
 │   │   ├── app.js / index.js
 │   │   ├── middlewares/                 # auth (sessão), rateLimit, loginLock
 │   │   ├── routes/                      # auth, admin (RBAC), profile, credentials,
 │   │   │                                # campaignsThin, metrics, plans, dev
-│   │   └── services/
-│   │       ├── meta.js                  # MetaAdsService (única saída de rede: Graph API)
-│   │       ├── metaOps.js               # operações de alto nível (por ID + requester)
-│   │       ├── credentialStore.js       # acesso + mascaramento (RBAC/IDOR)
-│   │       ├── campaignStore.js / campaignOps.js
-│   │       ├── userStore.js             # gestão de usuários (admin)
-│   │       ├── audit.js                 # auditoria sem segredos
-│   │       └── crypto.js / mailer.js
+│   │   └── services/                    # meta (MetaAdsService), metaOps, stores, audit…
+│   ├── .env.example                     # template de variáveis (valores fictícios)
 │   ├── data/                            # banco SQLite (gitignore)
 │   └── uploads/                         # fotos e avatares (gitignore)
-└── web/src/                             # React: páginas e componentes (ver árvore completa no git)
+├── web/                                 # ⭐ APLICAÇÃO PRINCIPAL — frontend React
+│   └── src/                             # páginas: Login, Dashboard, Wizard, Integrations,
+│                                        # AdminUsers, Metrics, Profile, Plans…
+└── legacy-python/                       # 📦 implementação legada Python/FastAPI — SEM papel
+                                         #    ativo; preservada com histórico e configs de deploy
 ```
 
 ---

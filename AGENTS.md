@@ -78,8 +78,13 @@ implementação.
 
 ## Contexto técnico do projeto (para agentes futuros)
 
-- **Stack:** monorepo npm workspaces — `server/` (Express 5 + better-sqlite3, porta 4000)
-  e `web/` (React 19 + Vite, porta 5173)
+- **Aplicação principal:** Node.js/React — **todas as novas implementações são feitas
+  exclusivamente em `server/` (Express 5 + better-sqlite3, porta 4000) e `web/`
+  (React 19 + Vite, porta 5173)**. Nada deve ser adicionado ao `legacy-python/`.
+- **Legado:** `legacy-python/` preserva a implementação anterior em Python/FastAPI
+  (com `railway.toml`, `Dockerfile`, `alembic` próprios) — apenas referência histórica,
+  SEM papel ativo. Se precisar implantá-la no Railway, aponte o *Root Directory* do
+  serviço para `/legacy-python`.
 - **Integração Meta:** BYOT (Bring Your Own Token), sem OAuth; `MetaAdsService`
   (`server/src/services/meta.js`) é a única saída de rede; tokens criptografados
   AES-256-GCM; validação/descoberta/publicação somente por ação explícita do usuário
